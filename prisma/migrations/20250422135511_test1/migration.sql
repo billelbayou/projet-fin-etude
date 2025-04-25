@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "etudiants" ALTER COLUMN "dateNaissance" DROP DEFAULT,
+ALTER COLUMN "lieuNaissance" DROP DEFAULT,
+ALTER COLUMN "domaine" DROP DEFAULT,
+ALTER COLUMN "filiere" DROP DEFAULT,
+ALTER COLUMN "specialite" DROP DEFAULT,
+ALTER COLUMN "anneeUniversitaireDebut" DROP DEFAULT;
