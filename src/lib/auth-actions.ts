@@ -68,7 +68,7 @@ export async function inscrireUtilisateur(
           specialite: "",
           diplomeType: "licence",
           anneeUniversitaireDebut: "",
-          departementId: "",
+          setupCompleted: false,
         },
       });
     }
