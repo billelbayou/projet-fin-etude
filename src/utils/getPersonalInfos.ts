@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/db/prisma";
 import { Session } from "next-auth";
 
 export default async function getPersonalInfos(session: Session) {
