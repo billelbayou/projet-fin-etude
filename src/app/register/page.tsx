@@ -71,7 +71,7 @@ export default function InscriptionForm() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-green-700">{state.message}</p>
+                    <p className="text-sm text-green-700">{state.error}</p>
                   </div>
                 </div>
               </div>
@@ -123,6 +123,26 @@ export default function InscriptionForm() {
                   name="nomComplet"
                   type="text"
                   required
+                  placeholder="Nom Prénom"
+                  className="text-black appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="numeroInscription"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Numéro d&apos;inscription
+              </label>
+              <div className="mt-1">
+                <input
+                  id="numeroInscription"
+                  name="numeroInscription"
+                  type="text"
+                  required
+                  placeholder="Votre numéro d'inscription"
                   className="text-black appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>
@@ -142,6 +162,7 @@ export default function InscriptionForm() {
                   type="email"
                   autoComplete="email"
                   required
+                  placeholder="exemple@email.com"
                   className="text-black appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>
@@ -161,6 +182,7 @@ export default function InscriptionForm() {
                   type="password"
                   autoComplete="new-password"
                   required
+                  placeholder="Votre mot de passe"
                   className="text-black appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>
@@ -180,6 +202,7 @@ export default function InscriptionForm() {
                   type="password"
                   autoComplete="new-password"
                   required
+                  placeholder="Confirmez votre mot de passe"
                   className="text-black appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>

@@ -1,7 +1,10 @@
 import { prisma } from "@/db/prisma";
+import { EtudiantUtilisateur } from "@/lib/types";
 import { Session } from "next-auth";
 
-export default async function getPersonalInfos(session: Session) {
+export default async function getPersonalInfos(
+  session: Session
+): Promise<EtudiantUtilisateur> {
   if (!session) {
     throw new Error("Session not found");
   }
@@ -29,9 +32,9 @@ export default async function getPersonalInfos(session: Session) {
   if (!etudiant) {
     throw new Error("Etudiant not found");
   }
-
-  return {
-    etudiant,
+  const etudiantUtilisateur: EtudiantUtilisateur = {
     Utilisateur,
+    Etudiant: etudiant,
   };
+  return etudiantUtilisateur;
 }

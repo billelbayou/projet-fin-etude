@@ -1,6 +1,6 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { prisma } from "@/db/prisma";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
@@ -12,6 +12,7 @@ export async function inscrireUtilisateur(
 ) {
   try {
     const role = formData.get("role") as "etudiant" | "admin";
+    const numeroInscription = formData.get("numeroInscription") as string;
     const nomComplet = formData.get("nomComplet") as string;
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
@@ -32,6 +33,15 @@ export async function inscrireUtilisateur(
 
     if (existingUser) {
       return { error: "Cet email est déjà utilisé" };
+    }
+
+    // Check if numeroInscription already exists
+    const existingEtudiant = await prisma.etudiant.findUnique({
+      where: { numeroInscription },
+    });
+
+    if (existingEtudiant) { 
+      return { error: "Cet numéro d'inscription est déjà utilisé" };
     }
 
     // Hash password
@@ -59,7 +69,7 @@ export async function inscrireUtilisateur(
       await prisma.etudiant.create({
         data: {
           id: user.id,
-          numeroInscription: `ETU-${Date.now()}`,
+          numeroInscription: numeroInscription,
           progression: "initial",
           dateNaissance: new Date(),
           lieuNaissance: "",
@@ -68,12 +78,10 @@ export async function inscrireUtilisateur(
           specialite: "",
           diplomeType: "licence",
           anneeUniversitaireDebut: "",
-          setupCompleted: false,
         },
       });
     }
 
-    return { success: true, message: "Inscription réussie" };
   } catch (error) {
     console.error(error);
     return {
@@ -81,6 +89,7 @@ export async function inscrireUtilisateur(
       error: "Une erreur est survenue lors de l'inscription",
     };
   }
+  redirect("/login");
 }
 
 export async function seConnecter(previousState: unknown, formData: FormData) {
@@ -93,4 +102,13 @@ export async function seConnecter(previousState: unknown, formData: FormData) {
     }
   }
   redirect("/etudiant");
+}
+
+export async function seDeconnecter(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  previousState: unknown,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  formData: FormData
+) {
+  await signOut({ redirectTo: "/login" });
 }

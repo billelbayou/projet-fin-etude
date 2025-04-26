@@ -33,7 +33,6 @@ model Etudiant {
   diplomeType             DiplomeType?        @default(licence)
   anneeUniversitaireDebut String?
   progression             EtudiantProgression @default(initial)
-  setupCompleted          Boolean             @default(false)
   user                    User                @relation(fields: [id], references: [id], onDelete: Cascade)
 
   @@map("etudiants")
@@ -51,7 +50,7 @@ enum DiplomeType {
 
 enum EtudiantProgression {
   initial
-  metadata
-  data
-  completed
+  informationComplete
+  transcriptConfigured
+  transcriptFilled
 }

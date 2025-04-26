@@ -1,7 +1,7 @@
 // app/etudiant/layout.tsx
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import SidebarNavigation from "@/components/student-sidebar";
+import SidebarNavigation from "@/components/etudiant-ui/student-sidebar";
 
 export default async function EtudiantLayout({
   children,
