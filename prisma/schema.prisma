@@ -8,10 +8,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model Utilisateur {
   id               String    @id @default(cuid())
   email            String    @unique
-  password         String
+  motDePasse       String
   role             Role
   nom              String
   prenom           String
@@ -19,7 +19,7 @@ model User {
   dateModification DateTime  @updatedAt
   etudiant         Etudiant?
 
-  @@map("users")
+  @@map("utilisateurs")
 }
 
 model Etudiant {
@@ -30,12 +30,96 @@ model Etudiant {
   domaine                 String?
   filiere                 String?
   specialite              String?
-  diplomeType             DiplomeType?        @default(licence)
+  typeDiplome             TypeDiplome?        @default(licence)
   anneeUniversitaireDebut String?
-  progression             EtudiantProgression @default(initial)
-  user                    User                @relation(fields: [id], references: [id], onDelete: Cascade)
+  progression             ProgressionEtudiant @default(initial)
+  utilisateur             Utilisateur         @relation(fields: [id], references: [id], onDelete: Cascade)
+  notesSemestres          SemestreNote[]
+  notesUnites             UniteNote[]
+  notesModules            ModuleNote[]
 
   @@map("etudiants")
+}
+
+model Semestre {
+  id           String         @id @default(cuid())
+  nom          String
+  ordre        Int // Ordre chronologique (1 = premier semestre, 2 = deuxième semestre, etc.)
+  unites       Unite[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  SemestreNote SemestreNote[]
+
+  @@map("semestres")
+}
+
+model Unite {
+  id         String      @id @default(cuid())
+  nom        String
+  semestre   Semestre    @relation(fields: [semestreId], references: [id])
+  semestreId String
+  modules    Module[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  UniteNote  UniteNote[]
+
+  @@map("unites")
+}
+
+model Module {
+  id          String       @id @default(cuid())
+  nom         String
+  credits     Int
+  coefficient Float
+  unite       Unite        @relation(fields: [uniteId], references: [id])
+  uniteId     String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  ModuleNote  ModuleNote[]
+
+  @@map("modules")
+}
+
+model SemestreNote {
+  id         String   @id @default(cuid())
+  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
+  etudiantId String
+  semestre   Semestre @relation(fields: [semestreId], references: [id])
+  semestreId String
+  note       Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([etudiantId, semestreId])
+  @@map("semestre_notes")
+}
+
+model UniteNote {
+  id         String   @id @default(cuid())
+  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
+  etudiantId String
+  unite      Unite    @relation(fields: [uniteId], references: [id])
+  uniteId    String
+  note       Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([etudiantId, uniteId])
+  @@map("unite_notes")
+}
+
+model ModuleNote {
+  id         String   @id @default(cuid())
+  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
+  etudiantId String
+  module     Module   @relation(fields: [moduleId], references: [id])
+  moduleId   String
+  note       Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([etudiantId, moduleId])
+  @@map("module_notes")
 }
 
 enum Role {
@@ -43,12 +127,12 @@ enum Role {
   etudiant
 }
 
-enum DiplomeType {
+enum TypeDiplome {
   licence
   master
 }
 
-enum EtudiantProgression {
+enum ProgressionEtudiant {
   initial
   informationComplete
   transcriptConfigured

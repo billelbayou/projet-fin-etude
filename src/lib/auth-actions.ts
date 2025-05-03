@@ -26,8 +26,8 @@ export async function inscrireUtilisateur(
       return { error: "Les mots de passe ne correspondent pas" };
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
+    // Check if Utilisateur already exists
+    const existingUser = await prisma.utilisateur.findUnique({
       where: { email },
     });
 
@@ -52,10 +52,10 @@ export async function inscrireUtilisateur(
     const nom = nomParts.join(" ");
 
     // Create user
-    const user = await prisma.user.create({
+    const user = await prisma.utilisateur.create({
       data: {
         email,
-        password: hashedPassword,
+        motDePasse: hashedPassword,
         role: role === "admin" ? "admin" : "etudiant",
         nom,
         prenom,
@@ -76,7 +76,7 @@ export async function inscrireUtilisateur(
           domaine: "",
           filiere: "",
           specialite: "",
-          diplomeType: "licence",
+          typeDiplome: "licence",
           anneeUniversitaireDebut: "",
         },
       });

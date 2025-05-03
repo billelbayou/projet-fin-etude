@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/db/prisma";
-import { DiplomeType } from "@prisma/client";
+import { TypeDiplome } from "@prisma/client";
 
 export async function updateInfo(previousState: unknown, formData: FormData) {
   const {
@@ -12,7 +12,7 @@ export async function updateInfo(previousState: unknown, formData: FormData) {
     domaine,
     filiere,
     specialite,
-    diplomeType,
+    typeDiplome,
     anneeUniversitaireDebut,
   } = Object.fromEntries(formData);
   const studentDetails = {
@@ -23,7 +23,7 @@ export async function updateInfo(previousState: unknown, formData: FormData) {
     domaine: domaine as string,
     filiere: filiere as string,
     specialite: specialite as string,
-    diplomeType: diplomeType as DiplomeType,
+    typeDiplome: typeDiplome as TypeDiplome,
     anneeUniversitaireDebut: anneeUniversitaireDebut as string,
   };
   try {
@@ -36,7 +36,7 @@ export async function updateInfo(previousState: unknown, formData: FormData) {
         domaine: studentDetails.domaine,
         filiere: studentDetails.filiere,
         specialite: studentDetails.specialite,
-        diplomeType: studentDetails.diplomeType,
+        typeDiplome: studentDetails.typeDiplome,
         anneeUniversitaireDebut: studentDetails.anneeUniversitaireDebut,
         progression: "informationComplete",
       },

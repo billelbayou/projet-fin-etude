@@ -14,7 +14,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       authorize: async (credentials) => {
         const { email, password } = schema.parse(credentials);
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.utilisateur.findUnique({
           where: { email },
         });
 
@@ -22,7 +22,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new AuthError("Cet email n'existe pas");
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await bcrypt.compare(password, user.motDePasse);
 
         if (!isPasswordValid) {
           throw new AuthError("Mot de passe incorrect");

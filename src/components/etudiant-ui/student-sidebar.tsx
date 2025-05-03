@@ -3,37 +3,63 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
+import { ProgressionEtudiant } from "@prisma/client";
 
+// Define the progression order based on the provided enum
+const PROGRESSION_ORDER: ProgressionEtudiant[] = [
+  "initial",
+  "informationComplete",
+  "transcriptConfigured",
+  "transcriptFilled",
+];
 
 export default function SidebarNavigation({
   children,
+  studentProgression,
 }: {
   children: React.ReactNode;
+  studentProgression: ProgressionEtudiant;
 }) {
   const currentPath = usePathname();
 
-  const menuItems = [
+  const menuItems: {
+    href: string;
+    number: number;
+    label: string;
+    phase: ProgressionEtudiant;
+  }[] = [
     {
       href: "/etudiant",
       number: 1,
       label: "Informations Personnelles",
+      phase: "initial",
     },
     {
       href: "/etudiant/configuration-releves",
       number: 2,
       label: "Configuration des Relevés",
+      phase: "informationComplete",
     },
     {
       href: "/etudiant/remplir-releves",
       number: 3,
       label: "Remplir les Relevés",
+      phase: "transcriptConfigured",
     },
     {
       href: "/etudiant/revision",
       number: 4,
       label: "Révision et Soumission",
+      phase: "transcriptFilled",
     },
   ];
+
+  // Function to check if a phase has been passed
+  const hasPassedPhase = (phase: ProgressionEtudiant) => {
+    const currentIndex = PROGRESSION_ORDER.indexOf(studentProgression);
+    const phaseIndex = PROGRESSION_ORDER.indexOf(phase);
+    return currentIndex > phaseIndex;
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -47,28 +73,31 @@ export default function SidebarNavigation({
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center p-3 rounded-lg transition-colors ${
-                currentPath === item.href
-                  ? "bg-indigo-50 text-indigo-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <span
-                className={`mr-3 p-1 rounded-full w-6 h-6 flex items-center justify-center text-xs ${
-                  currentPath === item.href
-                    ? "bg-indigo-100 text-indigo-800 font-bold"
-                    : "bg-gray-100 text-gray-600"
+          {menuItems.map((item) => {
+            const isPassed = hasPassedPhase(item.phase);
+            const isActive = currentPath === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center p-3 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                {item.number}
-              </span>
-              {item.label}
-            </Link>
-          ))}
+                <span
+                  className={`mr-3 p-1 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold text-indigo-800 ${
+                    isPassed ? "bg-green-400" : "bg-gray-100"
+                  }`}
+                >
+                  {item.number}
+                </span>
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Déconnexion */}

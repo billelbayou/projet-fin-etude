@@ -2,6 +2,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import SidebarNavigation from "@/components/etudiant-ui/student-sidebar";
+import getPersonalInfos from "@/utils/getPersonalInfos";
 
 export default async function EtudiantLayout({
   children,
@@ -13,5 +14,7 @@ export default async function EtudiantLayout({
     redirect("/login");
   }
 
-  return <SidebarNavigation>{children}</SidebarNavigation>;
+  const personalInfo = await getPersonalInfos(session);
+  const studentProgression = personalInfo.Etudiant.progression;
+  return <SidebarNavigation studentProgression={studentProgression}>{children}</SidebarNavigation>;
 }

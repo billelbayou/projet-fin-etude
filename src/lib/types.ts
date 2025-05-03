@@ -1,4 +1,4 @@
-import { Role, DiplomeType, EtudiantProgression } from "@prisma/client";
+import { Role, ProgressionEtudiant, TypeDiplome } from "@prisma/client";
 
 export const Domains = [
   "Mathématiques et Informatique",
@@ -24,7 +24,7 @@ export interface EtudiantUtilisateur {
   Utilisateur: {
     id: string;
     email: string;
-    password: string;
+    motDePasse: string;
     role: Role;
     nom: string;
     prenom: string;
@@ -39,9 +39,8 @@ export interface EtudiantUtilisateur {
     domaine: string | null;
     filiere: string | null;
     specialite: string | null;
-    diplomeType: DiplomeType | null;
+    typeDiplome: TypeDiplome | null;
     anneeUniversitaireDebut: string | null;
-    progression: EtudiantProgression;
-    setupCompleted: boolean;
+    progression: ProgressionEtudiant;
   };
 }

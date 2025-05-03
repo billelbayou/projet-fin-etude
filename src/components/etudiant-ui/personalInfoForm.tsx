@@ -26,7 +26,7 @@ export default function CombinedStudentForm({
     domaine: EtudiantUtilisateur.Etudiant.domaine || "",
     filiere: EtudiantUtilisateur.Etudiant.filiere || "",
     specialite: EtudiantUtilisateur.Etudiant.specialite || "",
-    diplomeType: EtudiantUtilisateur.Etudiant.diplomeType || "licence",
+    diplomeType: EtudiantUtilisateur.Etudiant.typeDiplome || "licence",
     anneeUniversitaireDebut:
       EtudiantUtilisateur.Etudiant.anneeUniversitaireDebut || "",
   });
