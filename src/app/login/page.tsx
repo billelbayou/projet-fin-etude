@@ -2,11 +2,13 @@
 
 import Head from "next/head";
 import { seConnecter } from "@/lib/auth-actions";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 
 export default function ConnexionForm() {
   const [state, dispatch, isPending] = useActionState(seConnecter, null);
+  const [activeTab, setActiveTab] = useState("student");
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <Head>
@@ -24,6 +26,32 @@ export default function ConnexionForm() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 mb-6">
+            <button
+              type="button"
+              className={`py-2 px-4 font-medium text-sm focus:outline-none ${
+                activeTab === "student"
+                  ? "border-b-2 border-indigo-500 text-indigo-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              onClick={() => setActiveTab("student")}
+            >
+              Étudiant
+            </button>
+            <button
+              type="button"
+              className={`py-2 px-4 font-medium text-sm focus:outline-none ${
+                activeTab === "admin"
+                  ? "border-b-2 border-indigo-500 text-indigo-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              onClick={() => setActiveTab("admin")}
+            >
+              Administrateur
+            </button>
+          </div>
+
           {state && (
             <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4">
               <div className="flex">
@@ -51,6 +79,9 @@ export default function ConnexionForm() {
           )}
 
           <form className="space-y-6" action={dispatch}>
+            {/* Hidden input to identify the user type */}
+            <input type="hidden" name="userType" value={activeTab} />
+
             <div>
               <label
                 htmlFor="email"
@@ -65,7 +96,11 @@ export default function ConnexionForm() {
                   type="email"
                   autoComplete="email"
                   required
-                  placeholder="exemple@email.com"
+                  placeholder={
+                    activeTab === "student"
+                      ? "exemple@etudiant.com"
+                      : "exemple@admin.com"
+                  }
                   className="text-black appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>
@@ -101,27 +136,30 @@ export default function ConnexionForm() {
               </button>
             </div>
           </form>
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Pas de compte?
-                </span>
-              </div>
-            </div>
 
+          {activeTab === "student" && (
             <div className="mt-6">
-              <Link
-                href="/register"
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                S&apos;inscrire
-              </Link>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">
+                    Pas de compte?
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <Link
+                  href="/register"
+                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  S&apos;inscrire
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

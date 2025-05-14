@@ -2,6 +2,7 @@
 
 import { prisma } from "@/db/prisma";
 import { TypeDiplome } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 export async function updateInfo(previousState: unknown, formData: FormData) {
   const {
@@ -48,4 +49,5 @@ export async function updateInfo(previousState: unknown, formData: FormData) {
       error: "Une erreur est survenue lors de la mise à jour des informations",
     };
   }
+  redirect("/etudiant/configuration-releves");
 }

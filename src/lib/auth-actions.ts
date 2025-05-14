@@ -1,9 +1,11 @@
 "use server";
 
-import { signIn, signOut } from "@/auth";
+import { auth, signIn, signOut } from "@/auth";
 import { prisma } from "@/db/prisma";
+import getPersonalInfos from "@/utils/getPersonalInfos";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function inscrireUtilisateur(
@@ -40,7 +42,7 @@ export async function inscrireUtilisateur(
       where: { numeroInscription },
     });
 
-    if (existingEtudiant) { 
+    if (existingEtudiant) {
       return { error: "Cet numéro d'inscription est déjà utilisé" };
     }
 
@@ -81,7 +83,6 @@ export async function inscrireUtilisateur(
         },
       });
     }
-
   } catch (error) {
     console.error(error);
     return {
@@ -95,13 +96,30 @@ export async function inscrireUtilisateur(
 export async function seConnecter(previousState: unknown, formData: FormData) {
   try {
     await signIn("credentials", formData);
+
     return { success: true, message: "Connexion réussie" };
   } catch (error) {
     if (error instanceof AuthError) {
       return { success: false, error: error.message };
     }
   }
-  redirect("/etudiant");
+  const session = await auth();
+  if (!session?.user?.email) {
+    return { error: "Aucune session active" };
+  }
+  const user = await prisma.utilisateur.findUnique({
+    where: { email: session.user.email },
+  });
+  if (!user) {
+    return { error: "Utilisateur introuvable" };
+  }
+  if (user.role === "admin") {
+    redirect("/admin");
+  } else if (user.role === "etudiant") {
+    redirect("/etudiant");
+  } else {
+    return { error: "Rôle d'utilisateur non reconnu" };
+  }
 }
 
 export async function seDeconnecter(
@@ -111,4 +129,5 @@ export async function seDeconnecter(
   formData: FormData
 ) {
   await signOut({ redirectTo: "/login" });
+  revalidatePath("/login");
 }

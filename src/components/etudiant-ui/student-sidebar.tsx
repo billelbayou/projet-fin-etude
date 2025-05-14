@@ -2,7 +2,7 @@
 // components/SidebarNavigation.tsx
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LogoutButton from "./LogoutButton";
+import LogoutButton from "../LogoutButton";
 import { ProgressionEtudiant } from "@prisma/client";
 
 // Define the progression order based on the provided enum
