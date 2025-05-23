@@ -1,4 +1,4 @@
-import { Role, ProgressionEtudiant, TypeDiplome } from "@prisma/client";
+import { ProgressionEtudiant, $Enums } from "@prisma/client";
 
 export const Domains = [
   "Mathématiques et Informatique",
@@ -24,23 +24,22 @@ export interface EtudiantUtilisateur {
   Utilisateur: {
     id: string;
     email: string;
-    motDePasse: string;
-    role: Role;
     nom: string;
     prenom: string;
-    dateCreation: Date;
-    dateModification: Date;
+    role: $Enums.Role;
   };
-  Etudiant: {
+  Etudiant?: {
     id: string;
-    numeroInscription: string;
+    userId: string;
+    departementId: string;
+    matricule: string;
     dateNaissance: Date | null;
     lieuNaissance: string | null;
     domaine: string | null;
     filiere: string | null;
     specialite: string | null;
-    typeDiplome: TypeDiplome | null;
     anneeUniversitaireDebut: string | null;
+    typeDiplome: "licence" | "master" | "doctorat" | null;
     progression: ProgressionEtudiant;
   };
 }

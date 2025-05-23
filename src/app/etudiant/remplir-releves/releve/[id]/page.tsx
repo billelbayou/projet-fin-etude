@@ -1,438 +1,346 @@
-// app/student/transcripts/fill/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-interface CourseModule {
+interface Module {
   id: string;
   nom: string;
-  credits: number;
   coefficient: number;
-  note: number;
+  credits: number;
+  uniteId: string;
 }
 
 interface Unite {
   id: string;
   nom: string;
-  note: number;
+  coefficient: number;
   credits: number;
-  courseModules: CourseModule[];
+  semestreId: string;
+  modules: Module[];
 }
 
 interface Semestre {
   id: string;
   nom: string;
-  ordre: number;
-  note: number;
+  coefficient: number;
   credits: number;
+  anneeId: string;
   unites: Unite[];
 }
 
-interface Transcript {
+interface AnneeUniv {
   id: string;
-  year: string;
-  level: string;
-  moyenne: number;
-  credits: number;
+  nom: string;
   semestres: Semestre[];
 }
 
-export default function FillTranscriptPage() {
-  const [transcript, setTranscript] = useState<Transcript | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const router = useRouter();
-  const params = useParams();
-  const transcriptId = params?.id as string;
-
-  // Calculate unit and semester notes based on module grades
-  const calculateDerivedGrades = (
-    currentTranscript: Transcript
-  ): Transcript => {
-    const updatedSemestres = currentTranscript.semestres.map((semestre) => {
-      const updatedUnites = semestre.unites.map((unite) => {
-        // Calculate unit average (weighted by coefficients)
-        const moduleResults = unite.courseModules.map((mod) => ({
-          note: mod.note,
-          coefficient: mod.coefficient,
-        }));
-
-        const totalCoefficient = moduleResults.reduce(
-          (sum, mod) => sum + mod.coefficient,
-          0
-        );
-        const weightedSum = moduleResults.reduce(
-          (sum, mod) => sum + mod.note * mod.coefficient,
-          0
-        );
-        const unitAverage =
-          totalCoefficient > 0 ? weightedSum / totalCoefficient : 0;
-
-        // Calculate unit credits (only modules with note >= 10)
-        const unitCredits = unite.courseModules
-          .filter((mod) => mod.note >= 10)
-          .reduce((sum, mod) => sum + mod.credits, 0);
-
-        return {
-          ...unite,
-          note: parseFloat(unitAverage.toFixed(2)),
-          credits: unitCredits,
-        };
-      });
-
-      // Calculate semester average (simple average of units)
-      const semesterAverage =
-        updatedUnites.length > 0
-          ? updatedUnites.reduce((sum, unite) => sum + unite.note, 0) /
-            updatedUnites.length
-          : 0;
-
-      // Calculate semester credits (sum of unit credits)
-      const semesterCredits = updatedUnites.reduce(
-        (sum, unite) => sum + unite.credits,
-        0
-      );
-
-      return {
-        ...semestre,
-        note: parseFloat(semesterAverage.toFixed(2)),
-        credits: semesterCredits,
-        unites: updatedUnites,
-      };
-    });
-
-    // Calculate overall average (simple average of semesters)
-    const overallAverage =
-      updatedSemestres.length > 0
-        ? updatedSemestres.reduce((sum, semestre) => sum + semestre.note, 0) /
-          updatedSemestres.length
-        : 0;
-
-    // Calculate overall credits (sum of semester credits)
-    const overallCredits = updatedSemestres.reduce(
-      (sum, semestre) => sum + semestre.credits,
-      0
-    );
-
-    return {
-      ...currentTranscript,
-      moyenne: parseFloat(overallAverage.toFixed(2)),
-      credits: overallCredits,
-      semestres: updatedSemestres,
-    };
+interface Etudiant {
+  id: string;
+  user: {
+    nom: string;
+    prenom: string;
   };
+  matricule: string;
+}
+
+interface AnneeNote {
+  id: string;
+  annee: string;
+  statut: string;
+  moyenne: number | null;
+  credits: number | null;
+  etudiant: Etudiant;
+  anneeUniv: AnneeUniv;
+  semestreNotes: any[]; // Adjust this based on actual structure
+}
+
+export default function RemplirReleve() {
+  const { id } = useParams();
+  const [anneeNote, setAnneeNote] = useState<AnneeNote | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [moduleGrades, setModuleGrades] = useState<Record<string, number>>({});
+  const [yearAverage, setYearAverage] = useState(0);
 
   useEffect(() => {
-    if (!transcriptId) return;
+    if (!id) return;
 
-    const fetchTranscripts = async () => {
+    const fetchTranscript = async () => {
       try {
-        const response = await fetch("/api/transcripts");
-        if (!response.ok) throw new Error("Failed to fetch transcripts");
+        setLoading(true);
+        const res = await fetch(`/api/transcripts/${id}`);
+        if (!res.ok) throw new Error("Échec du chargement du relevé");
+        const data = await res.json();
+        setAnneeNote(data.data);
 
-        const data = await response.json();
-        if (data.success) {
-          // Find the specific transcript we need
-          const foundTranscript = data.data.find(
-            (t: any) => t.id === transcriptId
-          );
-
-          if (foundTranscript) {
-            // Transform the data to match our interface
-            const formattedData = {
-              ...foundTranscript,
-              semestres: foundTranscript.semestres.map((semestre: any) => ({
-                ...semestre,
-                unites: semestre.unites.map((unite: any) => ({
-                  ...unite,
-                  courseModules: unite.modules, // Rename modules to courseModules
-                })),
-              })),
-            };
-            // Calculate initial derived grades
-            setTranscript(calculateDerivedGrades(formattedData));
-          } else {
-            setError("Transcript not found");
-          }
-        } else {
-          setError(data.error || "Failed to load transcripts");
-        }
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load transcripts"
+        // Initialize module grades
+        const initialGrades: Record<string, number> = {};
+        data.data.anneeUniv.semestres.forEach((s: Semestre) =>
+          s.unites.forEach((u: Unite) =>
+            u.modules.forEach((m: Module) => {
+              initialGrades[m.id] = 0;
+            })
+          )
         );
+        setModuleGrades(initialGrades);
+      } catch (e: any) {
+        setError(e.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTranscripts();
-  }, [transcriptId]);
+    fetchTranscript();
+  }, [id]);
 
-  const handleModuleNoteChange = (
-    semestreId: string,
-    uniteId: string,
-    moduleId: string,
-    value: number
-  ) => {
-    if (!transcript) return;
-
-    setTranscript((prev) => {
-      if (!prev) return null;
-
-      const updatedSemestres = prev.semestres.map((semestre) => {
-        if (semestre.id !== semestreId) return semestre;
-
-        const updatedUnites = semestre.unites.map((unite) => {
-          if (unite.id !== uniteId) return unite;
-
-          const updatedModules = unite.courseModules.map((mod) => {
-            if (mod.id !== moduleId) return mod;
-            return { ...mod, note: value };
-          });
-
-          return { ...unite, courseModules: updatedModules };
-        });
-
-        return { ...semestre, unites: updatedUnites };
-      });
-
-      // Recalculate all derived grades after module change
-      const updatedTranscript = {
-        ...prev,
-        semestres: updatedSemestres,
-      };
-      return calculateDerivedGrades(updatedTranscript);
-    });
+  const handleGradeChange = (moduleId: string, value: string) => {
+    const note = parseFloat(value) || 0;
+    setModuleGrades((prev) => ({ ...prev, [moduleId]: note }));
   };
 
-  const handleSubmit = async () => {
-    if (!transcript || submitting) return;
+  const calculateCredits = (note: number, totalCredits: number) =>
+    note >= 10 ? totalCredits : 0;
 
-    setSubmitting(true);
+  const calculateUnitAverage = (unite: Unite) => {
+    const total = unite.modules.reduce((sum, m) => {
+      const note = moduleGrades[m.id] || 0;
+      return sum + note * m.coefficient;
+    }, 0);
+    const coefTotal = unite.modules.reduce((sum, m) => sum + m.coefficient, 0);
+    return coefTotal ? total / coefTotal : 0;
+  };
+
+  const calculateSemesterAverage = (semestre: Semestre) => {
+    const total = semestre.unites.reduce((sum, u) => {
+      const avg = calculateUnitAverage(u);
+      return sum + avg * u.coefficient;
+    }, 0);
+    const coefTotal = semestre.unites.reduce(
+      (sum, u) => sum + u.coefficient,
+      0
+    );
+    return coefTotal ? total / coefTotal : 0;
+  };
+
+  const calculateYearAverage = () => {
+    if (!anneeNote) return 0;
+    const total = anneeNote.anneeUniv.semestres.reduce((sum, s) => {
+      const avg = calculateSemesterAverage(s);
+      return sum + avg * s.coefficient;
+    }, 0);
+    const coefTotal = anneeNote.anneeUniv.semestres.reduce(
+      (sum, s) => sum + s.coefficient,
+      0
+    );
+    return coefTotal ? total / coefTotal : 0;
+  };
+
+  const calculateYearTotalCredits = () => {
+    if (!anneeNote) return 0;
+    console.log(anneeNote);
+    return anneeNote.anneeUniv.semestres.reduce((total, s) => {
+      return (
+        total +
+        s.unites.reduce((uTotal, u) => {
+          const avg = calculateUnitAverage(u);
+          return uTotal + calculateCredits(avg, u.credits);
+        }, 0)
+      );
+    }, 0);
+  };
+
+  useEffect(() => {
+    if (anneeNote) {
+      setYearAverage(calculateYearAverage());
+    }
+  }, [moduleGrades, anneeNote]);
+
+  const totalCreditsObtained = calculateYearTotalCredits();
+
+  let finalStatus = "";
+  let finalColor = "";
+
+  if (yearAverage >= 10) {
+    finalStatus = "Validé";
+    finalColor = "bg-green-100 text-green-800";
+  } else if (yearAverage < 10 && totalCreditsObtained >= 30) {
+    finalStatus = "Validé avec dettes";
+    finalColor = "bg-yellow-100 text-yellow-800";
+  } else {
+    finalStatus = "Non validé";
+    finalColor = "bg-red-100 text-red-800";
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!anneeNote) return;
+
     try {
-      // Prepare data for API (convert back to original format if needed)
-      const submissionData = {
-        ...transcript,
-        semestres: transcript.semestres.map((semestre) => ({
-          ...semestre,
-          unites: semestre.unites.map((unite) => ({
-            ...unite,
-            modules: unite.courseModules, // Convert back to 'modules' for API
-          })),
-        })),
-      };
+      const moduleNotes = anneeNote.anneeUniv.semestres.flatMap((s) =>
+        s.unites.flatMap((u) =>
+          u.modules.map((m) => ({
+            moduleId: m.id,
+            note: moduleGrades[m.id] || 0,
+            credits: calculateCredits(moduleGrades[m.id] || 0, m.credits),
+          }))
+        )
+      );
 
-      const response = await fetch(`/api/transcripts/${transcriptId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submissionData),
+      const uniteNotes = anneeNote.anneeUniv.semestres.flatMap((s) =>
+        s.unites.map((u) => {
+          const note = calculateUnitAverage(u);
+          return {
+            uniteId: u.id,
+            note,
+            credits: calculateCredits(note, u.credits),
+          };
+        })
+      );
+
+      const semestreNotes = anneeNote.anneeUniv.semestres.map((s) => {
+        const note = calculateSemesterAverage(s);
+        return {
+          semestreId: s.id,
+          note,
+          credits: calculateCredits(note, s.credits),
+        };
       });
 
-      if (!response.ok) throw new Error("Failed to save");
+      const response = await fetch(`/api/transcripts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          moduleNotes,
+          uniteNotes,
+          semestreNotes,
+          anneeNote: {
+            moyenne: yearAverage,
+            credits: totalCreditsObtained,
+            statut:
+              yearAverage >= 10
+                ? "PASSED"
+                : totalCreditsObtained >= 30
+                ? "PASSED_WITH_DEBT"
+                : "FAILED",
+          },
+        }),
+      });
 
-      const data = await response.json();
-      if (data.success) {
-        router.push("/etudiant/remplir-releves");
-      } else {
-        setError(data.error || "Failed to save transcript");
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save transcript"
-      );
-    } finally {
-      setSubmitting(false);
+      if (!response.ok) throw new Error();
+      toast.success("Relevé enregistré avec succès !");
+    } catch {
+      toast.error("Erreur lors de l'enregistrement !");
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-        <button
-          onClick={() => router.push("/student/transcripts")}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Back to Transcripts
-        </button>
-      </div>
-    );
-  }
-
-  if (!transcript) {
-    return (
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-          Transcript not found
-        </div>
-        <button
-          onClick={() => router.push("/student/transcripts")}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Back to Transcripts
-        </button>
-      </div>
-    );
-  }
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div className="text-red-600">Erreur : {error}</div>;
+  if (!anneeNote) return <div>Aucun relevé trouvé</div>;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">
-        Fill Transcript: {transcript.level} - {transcript.year}
-      </h1>
-
-      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-        <h2 className="font-semibold text-lg mb-2">Summary</h2>
-        <p>
-          Overall Average:{" "}
-          <span className="font-bold">{transcript.moyenne.toFixed(2)}</span>
-        </p>
-        <p>
-          Total Credits: <span className="font-bold">{transcript.credits}</span>
-        </p>
+    <div className="max-w-5xl mx-auto p-4">
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold">Remplir le relevé de notes</h1>
+        <div className="flex justify-between mt-2">
+          <span>
+            <strong>Étudiant:</strong> {anneeNote.etudiant.user.nom}{" "}
+            {anneeNote.etudiant.user.prenom}
+          </span>
+          <span>
+            <strong>Matricule:</strong> {anneeNote.etudiant.matricule}
+          </span>
+          <span>
+            <strong>Année:</strong> {anneeNote.annee}
+          </span>
+        </div>
       </div>
 
-      <div className="space-y-8">
-        {transcript.semestres.map((semestre) => (
-          <div key={semestre.id} className="border rounded-lg overflow-hidden">
-            <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
-              <h2 className="font-semibold text-lg">
-                Semester {semestre.ordre}: {semestre.nom}
-              </h2>
-              <div className="text-right">
-                <p className="text-sm">
-                  Average:{" "}
-                  <span className="font-medium">
-                    {semestre.note.toFixed(2)}
-                  </span>
-                </p>
-                <p className="text-sm">
-                  Credits:{" "}
-                  <span className="font-medium">{semestre.credits}</span>
-                </p>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="space-y-6">
-                {semestre.unites.map((unite) => (
-                  <div key={unite.id} className="border rounded p-4">
-                    <div className="mb-4 flex justify-between items-center">
-                      <h3 className="font-medium text-gray-700">
-                        Unit: {unite.nom}
-                      </h3>
-                      <div className="text-right">
-                        <p className="text-sm">
-                          Average:{" "}
-                          <span className="font-medium">
-                            {unite.note.toFixed(2)}
-                          </span>
-                        </p>
-                        <p className="text-sm">
-                          Credits:{" "}
-                          <span className="font-medium">{unite.credits}</span>
-                        </p>
-                      </div>
-                    </div>
+      <h2 className="text-lg font-semibold text-center mb-4">
+        {anneeNote.anneeUniv.nom}
+      </h2>
 
-                    <div className="ml-4 space-y-4">
-                      <h4 className="font-medium text-gray-700">Modules:</h4>
-                      {unite.courseModules.map((courseModule) => (
-                        <div
-                          key={courseModule.id}
-                          className="flex items-center justify-between"
-                        >
-                          <div>
-                            <span className="font-medium">
-                              {courseModule.nom}
-                            </span>
-                            <span className="text-sm text-gray-500 ml-2">
-                              (Credits: {courseModule.credits}, Coeff:{" "}
-                              {courseModule.coefficient})
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            step="0.1"
-                            value={courseModule.note || 0}
-                            onChange={(e) =>
-                              handleModuleNoteChange(
-                                semestre.id,
-                                unite.id,
-                                courseModule.id,
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="w-24 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+      <form onSubmit={handleSubmit}>
+        <table className="w-full border-collapse mb-4 text-sm text-center">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="border p-1">Module</th>
+              <th className="border p-1">Coef</th>
+              <th className="border p-1">Créd</th>
+              <th className="border p-1">Note</th>
+              <th className="border p-1">Créd Obtenus</th>
+            </tr>
+          </thead>
+          <tbody>
+            {anneeNote.anneeUniv.semestres.map((s) => (
+              <React.Fragment key={s.id}>
+                <tr className="bg-blue-50 text-blue-800 font-bold">
+                  <td colSpan={5} className="border p-1">
+                    {s.nom} (Coef: {s.coefficient})
+                  </td>
+                </tr>
+                {s.unites.map((u) => (
+                  <React.Fragment key={u.id}>
+                    {u.modules.map((m) => {
+                      const note = moduleGrades[m.id] || 0;
+                      const credits = calculateCredits(note, m.credits);
+                      return (
+                        <tr key={m.id}>
+                          <td className="border p-1">{m.nom}</td>
+                          <td className="border p-1">{m.coefficient}</td>
+                          <td className="border p-1">{m.credits}</td>
+                          <td className="border p-1">
+                            <input
+                              type="number"
+                              min="0"
+                              max="20"
+                              step="0.01"
+                              className="w-16 text-center border rounded"
+                              value={note}
+                              onChange={(e) =>
+                                handleGradeChange(m.id, e.target.value)
+                              }
+                            />
+                          </td>
+                          <td className="border p-1">{credits}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="bg-gray-50 font-semibold text-blue-700">
+                      <td className="border p-1">Unité {u.nom}</td>
+                      <td className="border p-1">{u.coefficient}</td>
+                      <td className="border p-1">{u.credits}</td>
+                      <td className="border p-1" colSpan={2}>
+                        Moyenne: {calculateUnitAverage(u).toFixed(2)}
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 ))}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
 
-      <div className="mt-8 flex justify-between">
+        <div className="flex justify-between items-center mt-6 mb-4">
+          <span>
+            <strong>Moyenne annuelle :</strong> {yearAverage.toFixed(2)}
+          </span>
+          <span>
+            <strong>Crédits obtenus :</strong> {totalCreditsObtained}
+          </span>
+          <span className={`px-2 py-1 rounded ${finalColor}`}>
+            {finalStatus}
+          </span>
+        </div>
+
         <button
-          onClick={() => router.push("/student/transcripts")}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded"
+          type="submit"
+          className="px-6 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
         >
-          Cancel
+          Sauvegarder
         </button>
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded disabled:bg-green-300"
-        >
-          {submitting ? (
-            <span className="flex items-center">
-              <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Saving...
-            </span>
-          ) : (
-            "Save Transcript"
-          )}
-        </button>
-      </div>
+      </form>
     </div>
   );
 }

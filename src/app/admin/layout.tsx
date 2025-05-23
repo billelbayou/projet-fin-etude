@@ -1,7 +1,7 @@
 // app/etudiant/layout.tsx
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import AdminSidebarNavigation from "@/components/admin-sidebar";
+import getPersonalInfos from "@/utils/getPersonalInfos";
 
 export default async function AdminLayout({
   children,
@@ -12,6 +12,13 @@ export default async function AdminLayout({
   if (!session?.user) {
     redirect("/login");
   }
+  const user = await getPersonalInfos(session);
+  if (!user) {
+    redirect("/login");
+  }
+  if (user.Utilisateur.role !== "ADMIN") {
+    redirect("/login");
+  }
 
-  return <AdminSidebarNavigation>{children}</AdminSidebarNavigation>;
+  return children;
 }

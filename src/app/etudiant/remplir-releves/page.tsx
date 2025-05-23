@@ -1,16 +1,12 @@
-// app/student/transcripts/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnneeNote, AnneeUniversitaire } from "@prisma/client";
 
-interface Transcript {
-  id: string;
-  year: string;
-  level: string;
-  moyenne: number;
-  credits: number;
-}
+type Transcript = AnneeNote & {
+  anneeUniv: Pick<AnneeUniversitaire, "niveau" | "nom">;
+};
 
 export default function TranscriptsPage() {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
@@ -23,11 +19,8 @@ export default function TranscriptsPage() {
       try {
         const response = await fetch("/api/transcripts");
         const data = await response.json();
-        if (data.success) {
-          setTranscripts(data.data);
-        } else {
-          setError(data.error || "Failed to load transcripts");
-        }
+        setTranscripts(data);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
         setError("Failed to load transcripts");
       } finally {
@@ -75,28 +68,51 @@ export default function TranscriptsPage() {
           {transcripts.map((transcript) => (
             <div
               key={transcript.id}
-              className="border rounded-lg p-4 hover:bg-gray-50"
+              className="border rounded-2xl shadow-sm p-6 hover:bg-gray-50 transition-all duration-200"
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold">
-                    {transcript.level} - {transcript.year}
+                  <h2 className="text-xl font-bold text-gray-800">
+                    {transcript.anneeUniv.nom}
                   </h2>
-                  <p className="text-gray-600">
-                    Average: {transcript.moyenne.toFixed(2)} | Credits:{" "}
-                    {transcript.credits}
+                  <p className="text-sm text-gray-500">
+                    Created on:{" "}
+                    {new Date(transcript.createdAt).toLocaleDateString(
+                      "en-GB",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }
+                    )}
                   </p>
                 </div>
+
                 <button
                   onClick={() =>
                     router.push(
                       `/etudiant/remplir-releves/releve/${transcript.id}`
                     )
                   }
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+                  className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium shadow"
                 >
                   Fill Transcript
                 </button>
+              </div>
+
+              <div className="text-sm text-gray-700">
+                <span className="font-medium text-gray-600">Status: </span>
+                <span
+                  className={`capitalize font-semibold ${
+                    transcript.statut === "PASSED"
+                      ? "text-green-600"
+                      : transcript.statut === "FAILED"
+                      ? "text-red-600"
+                      : "text-yellow-600"
+                  }`}
+                >
+                  {transcript.statut.replace("_", " ").toLowerCase()}
+                </span>
               </div>
             </div>
           ))}

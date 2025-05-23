@@ -8,44 +8,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model AnneeUniversitaire {
-  id          String      @id @default(cuid())
-  niveau      EnmumNiveau
-  semestres   Semestre[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  anneesNotes AnneeNote[]
+model User {
+  id                String       @id @default(cuid())
+  email             String       @unique
+  motDePasse        String
+  nom               String
+  prenom            String
+  role              Role
+  managedDepartment Departement? @relation("DepartmentChef")
+  etudiant          Etudiant?
+  soumissions       Soumission[] @relation("ChefSoumissions")
+  dateCreation      DateTime     @default(now())
+  dateModification  DateTime     @updatedAt
 
-  @@map("annees_universitaires")
+  @@map("users")
 }
 
-enum EnmumNiveau {
-  L1
-  L2
-  L3
+model Departement {
+  id                   String               @id @default(cuid())
+  name                 String               @unique
+  chef                 User?                @relation("DepartmentChef", fields: [chefId], references: [id])
+  chefId               String?              @unique
+  etudiants            Etudiant[]
+  anneesUniversitaires AnneeUniversitaire[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@map("departments")
 }
 
-model AnneeNote {
-  id            String             @id @default(cuid())
-  annee         String
-  etudiant      Etudiant           @relation(fields: [etudiantId], references: [id])
-  etudiantId    String
-  anneeUniv     AnneeUniversitaire @relation(fields: [anneeUnivId], references: [id])
-  anneeUnivId   String
-  moyenne       Float?
-  credits       Int?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  semestreNotes SemestreNote[]
-
-  @@unique([etudiantId, anneeUnivId, annee])
-  @@map("annee_notes")
-}
-
-// Updated Etudiant model (remove anneeUniversitaire relation)
 model Etudiant {
-  id                      String              @id
-  numeroInscription       String              @unique
+  id                      String              @id @default(cuid())
+  user                    User                @relation(fields: [userId], references: [id])
+  userId                  String              @unique
+  departement             Departement         @relation(fields: [departementId], references: [id])
+  departementId           String
+  matricule               String              @unique
   dateNaissance           DateTime?
   lieuNaissance           String?
   domaine                 String?
@@ -54,53 +52,61 @@ model Etudiant {
   anneeUniversitaireDebut String?
   typeDiplome             TypeDiplome?        @default(licence)
   progression             ProgressionEtudiant @default(initial)
-  utilisateur             Utilisateur         @relation(fields: [id], references: [id], onDelete: Cascade)
-  notesSemestres          SemestreNote[]
-  notesUnites             UniteNote[]
   notesModules            ModuleNote[]
+  notesUnites             UniteNote[]
+  notesSemestres          SemestreNote[]
   notesAnnees             AnneeNote[]
+  soumissions             Soumission[]
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
 
   @@map("etudiants")
 }
 
-// Semestre remains unchanged from your original
+model AnneeUniversitaire {
+  id            String      @id @default(cuid())
+  nom           String
+  niveau        EnmumNiveau
+  domaine       String?
+  filiere       String?
+  specialite    String?
+  departement   Departement @relation(fields: [departementId], references: [id])
+  departementId String
+  semestres     Semestre[]
+  anneesNotes   AnneeNote[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("annees_universitaires")
+}
+
 model Semestre {
-  id           String             @id @default(cuid())
-  nom          String
-  ordre        Int
-  unites       Unite[]
-  annee        AnneeUniversitaire @relation(fields: [anneeId], references: [id])
-  anneeId      String
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  SemestreNote SemestreNote[]
+  id          String             @id @default(cuid())
+  nom         String
+  ordre       Int
+  credits     Int
+  coefficient Float
+  annee       AnneeUniversitaire @relation(fields: [anneeId], references: [id])
+  anneeId     String
+  unites      Unite[]
+  notes       SemestreNote[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   @@map("semestres")
 }
 
-model Utilisateur {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  motDePasse       String
-  role             Role
-  nom              String
-  prenom           String
-  dateCreation     DateTime  @default(now())
-  dateModification DateTime  @updatedAt
-  etudiant         Etudiant?
-
-  @@map("utilisateurs")
-}
-
 model Unite {
-  id         String      @id @default(cuid())
-  nom        String
-  semestre   Semestre    @relation(fields: [semestreId], references: [id])
-  semestreId String
-  modules    Module[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  UniteNote  UniteNote[]
+  id          String      @id @default(cuid())
+  nom         String
+  credits     Int
+  coefficient Float
+  semestre    Semestre    @relation(fields: [semestreId], references: [id])
+  semestreId  String
+  modules     Module[]
+  notes       UniteNote[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@map("unites")
 }
@@ -112,65 +118,127 @@ model Module {
   coefficient Float
   unite       Unite        @relation(fields: [uniteId], references: [id])
   uniteId     String
+  notes       ModuleNote[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  ModuleNote  ModuleNote[]
 
   @@map("modules")
 }
 
-model SemestreNote {
-  id          String    @id @default(cuid())
-  etudiant    Etudiant  @relation(fields: [etudiantId], references: [id])
-  etudiantId  String
-  semestre    Semestre  @relation(fields: [semestreId], references: [id])
-  semestreId  String
-  note        Float
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  anneeNote   AnneeNote @relation(fields: [anneeNoteId], references: [id])
-  anneeNoteId String
-
-  @@unique([etudiantId, semestreId, anneeNoteId])
-  @@map("semestre_notes")
-}
-
-model UniteNote {
-  id         String   @id @default(cuid())
-  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
-  etudiantId String
-  unite      Unite    @relation(fields: [uniteId], references: [id])
-  uniteId    String
-  note       Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([etudiantId, uniteId])
-  @@map("unite_notes")
-}
-
 model ModuleNote {
-  id         String   @id @default(cuid())
-  etudiant   Etudiant @relation(fields: [etudiantId], references: [id])
-  etudiantId String
-  module     Module   @relation(fields: [moduleId], references: [id])
-  moduleId   String
-  note       Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String     @id @default(cuid())
+  etudiant    Etudiant   @relation(fields: [etudiantId], references: [id])
+  etudiantId  String
+  module      Module     @relation(fields: [moduleId], references: [id])
+  moduleId    String
+  note        Float
+  credits     Int        @default(0)
+  uniteNote   UniteNote? @relation(fields: [uniteNoteId], references: [id])
+  uniteNoteId String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@unique([etudiantId, moduleId])
   @@map("module_notes")
 }
 
+model UniteNote {
+  id             String        @id @default(cuid())
+  etudiant       Etudiant      @relation(fields: [etudiantId], references: [id])
+  etudiantId     String
+  unite          Unite         @relation(fields: [uniteId], references: [id])
+  uniteId        String
+  note           Float
+  credits        Int           @default(0)
+  semestreNote   SemestreNote? @relation(fields: [semestreNoteId], references: [id])
+  semestreNoteId String?
+  moduleNotes    ModuleNote[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([etudiantId, uniteId])
+  @@map("unite_notes")
+}
+
+model SemestreNote {
+  id          String      @id @default(cuid())
+  etudiant    Etudiant    @relation(fields: [etudiantId], references: [id])
+  etudiantId  String
+  semestre    Semestre    @relation(fields: [semestreId], references: [id])
+  semestreId  String
+  note        Float
+  credits     Int         @default(0)
+  anneeNote   AnneeNote   @relation(fields: [anneeNoteId], references: [id])
+  anneeNoteId String
+  uniteNotes  UniteNote[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([etudiantId, semestreId, anneeNoteId])
+  @@map("semestre_notes")
+}
+
+model AnneeNote {
+  id            String             @id @default(cuid())
+  annee         String
+  etudiant      Etudiant           @relation(fields: [etudiantId], references: [id])
+  etudiantId    String
+  anneeUniv     AnneeUniversitaire @relation(fields: [anneeUnivId], references: [id])
+  anneeUnivId   String
+  statut        statut
+  moyenne       Float?
+  credits       Int?               @default(0)
+  semestreNotes SemestreNote[]
+  soumission    Soumission?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([etudiantId, anneeUnivId, annee])
+  @@map("annee_notes")
+}
+
+model Soumission {
+  id                String           @id @default(cuid())
+  anneeNote         AnneeNote        @relation(fields: [anneeNoteId], references: [id])
+  anneeNoteId       String           @unique
+  etudiant          Etudiant         @relation(fields: [etudiantId], references: [id])
+  etudiantId        String
+  chefDepartement   User             @relation("ChefSoumissions", fields: [chefDepartementId], references: [id])
+  chefDepartementId String
+  statut            SoumissionStatut
+  dateSoumission    DateTime
+  dateValidation    DateTime?
+  commentaire       String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@map("soumissions")
+}
+
+enum statut {
+  PASSED
+  PASSED_WITH_DEBT
+  FAILED
+}
+
+enum SoumissionStatut {
+  PENDING
+  APPROVED
+  REJECTED
+  REVISED
+}
+
 enum Role {
-  admin
-  etudiant
+  ADMIN
+  CHEF_DEPARTEMENT
+  ETUDIANT
+  ENSEIGNANT
 }
 
 enum TypeDiplome {
   licence
   master
+  doctorat
 }
 
 enum ProgressionEtudiant {
@@ -178,4 +246,15 @@ enum ProgressionEtudiant {
   informationComplete
   transcriptConfigured
   transcriptFilled
+  soumis
+  valide
+  rejete
+}
+
+enum EnmumNiveau {
+  L1
+  L2
+  L3
+  M1
+  M2
 }

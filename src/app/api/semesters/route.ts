@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
-import {prisma} from "@/db/prisma";
+import { prisma } from "@/db/prisma";
 
 export async function POST(request: Request) {
   try {
-    const { name, order, academicYearId } = await request.json();
+    const { name, credits, coefficient, order, academicYearId } =
+      await request.json();
 
     // Create new semester
     const newSemester = await prisma.semestre.create({
       data: {
         nom: name,
+        credits: credits,
+        coefficient: coefficient,
         ordre: order,
         anneeId: academicYearId,
       },

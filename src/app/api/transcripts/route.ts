@@ -5,216 +5,199 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const session = await auth();
-
   if (!session) {
     return NextResponse.json(
-      { success: false, error: "Session non valide" },
+      { error: "Vous devez être connecté pour créer un étudiant" },
       { status: 401 }
     );
   }
 
   try {
-    const user = await getPersonalInfos(session);
-    const etudiantId = user.Etudiant.id;
-    const data = await request.json();
+    const body = await request.json();
+    const { year, academicYearId, status } = body;
 
-    // Validate request body
-    if (
-      !data.year ||
-      !data.level ||
-      !data.s1_moyenne ||
-      !data.s1_credits ||
-      !data.s2_moyenne ||
-      !data.s2_credits
-    ) {
+    // Validate required fields
+    if (!year || !academicYearId) {
       return NextResponse.json(
-        { success: false, error: "Tous les champs sont requis" },
+        { error: "Tous les champs obligatoires doivent être remplis" },
         { status: 400 }
       );
     }
 
-    const transcriptDetails = {
-      year: data.year as string,
-      level: data.level as "L1" | "L2" | "L3",
-      s1_moyenne: parseFloat(data.s1_moyenne as string),
-      s1_credits: parseInt(data.s1_credits as string),
-      s2_moyenne: parseFloat(data.s2_moyenne as string),
-      s2_credits: parseInt(data.s2_credits as string),
-    };
+    // Get student ID from session
+    const user = await getPersonalInfos(session);
 
-    // Find the academic year template with all nested relations
-    const anneeTemplate = await prisma.anneeUniversitaire.findFirst({
-      where: { niveau: transcriptDetails.level },
-      include: {
-        semestres: {
-          include: {
-            unites: {
-              include: {
-                modules: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!anneeTemplate) {
+    if (!user.Etudiant) {
       return NextResponse.json(
-        { success: false, error: "Le template pour ce niveau n'existe pas" },
+        { error: "Étudiant non trouvé" },
         { status: 404 }
       );
     }
 
-    // Check for existing configuration
-    const existingConfig = await prisma.anneeNote.findFirst({
+    // Check if year already exists for this student
+    const existingYear = await prisma.anneeNote.findFirst({
       where: {
-        etudiantId,
-        anneeUnivId: anneeTemplate.id,
-        annee: transcriptDetails.year,
+        etudiantId: user.Etudiant.id,
+        annee: year,
       },
     });
 
-    if (existingConfig) {
+    if (existingYear) {
       return NextResponse.json(
-        {
-          success: false,
-          error: `Configuration existe déjà pour ${transcriptDetails.level} (${transcriptDetails.year})`,
-        },
+        { error: "Cette année académique existe déjà" },
         { status: 409 }
       );
     }
 
-    // Calculate averages
-    const moyenne =
-      (transcriptDetails.s1_moyenne + transcriptDetails.s2_moyenne) / 2;
-    const credits =
-      moyenne >= 10
-        ? 60
-        : transcriptDetails.s1_credits + transcriptDetails.s2_credits;
-
-    // Create in transaction with extended timeout
-    const result = await prisma.$transaction(
-      async (tx) => {
-        // 1. Create academic year record
-        const newAnneeNote = await tx.anneeNote.create({
-          data: {
-            annee: transcriptDetails.year,
-            moyenne,
-            credits,
-            etudiant: { connect: { id: etudiantId } },
-            anneeUniv: { connect: { id: anneeTemplate.id } },
-          },
-        });
-
-        // 2. Create semester notes
-        await Promise.all(
-          anneeTemplate.semestres.map((semestre, index) =>
-            tx.semestreNote.create({
-              data: {
-                note:
-                  index === 0
-                    ? transcriptDetails.s1_moyenne
-                    : transcriptDetails.s2_moyenne,
-                etudiant: { connect: { id: etudiantId } },
-                semestre: { connect: { id: semestre.id } },
-                anneeNote: { connect: { id: newAnneeNote.id } },
-              },
-            })
-          )
-        );
-
-        // Prepare all unit and module notes to create
-        const uniteNotesToCreate = [];
-        const moduleNotesToCreate = [];
-
-        for (const semestre of anneeTemplate.semestres) {
-          for (const unite of semestre.unites) {
-            uniteNotesToCreate.push({
-              note: 0,
-              etudiantId,
-              uniteId: unite.id,
-            });
-
-            for (const Module of unite.modules) {
-              moduleNotesToCreate.push({
-                note: 0,
-                etudiantId,
-                moduleId: Module.id,
-              });
-            }
-          }
-        }
-
-        // 3. Create all unit notes in batch
-        if (uniteNotesToCreate.length > 0) {
-          await tx.uniteNote.createMany({
-            data: uniteNotesToCreate,
-            skipDuplicates: true,
-          });
-        }
-
-        // 4. Create all module notes in batch
-        if (moduleNotesToCreate.length > 0) {
-          await tx.moduleNote.createMany({
-            data: moduleNotesToCreate,
-            skipDuplicates: true,
-          });
-        }
-
-        // 5. Update student progression
-        await tx.etudiant.update({
-          where: { id: etudiantId },
-          data: { progression: "transcriptConfigured" },
-        });
-
-        return newAnneeNote;
+    // Check if the that level is already passed
+    const levelPassed = await prisma.anneeNote.findFirst({
+      where: {
+        etudiantId: user.Etudiant.id,
+        anneeUnivId: academicYearId,
+        statut: "PASSED",
       },
-      {
-        maxWait: 20000, // Maximum time to wait for the transaction to complete
-        timeout: 15000, // Maximum time the transaction can run
-      }
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: "Relevé configuré avec succès",
-      data: result,
     });
-  } catch (error) {
-    console.error("Error:", error);
 
-    let errorMessage = "Erreur serveur";
-    if (error.code === "P2002") {
-      errorMessage = "Configuration existe déjà pour ces semestres";
-    } else if (error.message) {
-      errorMessage = error.message;
+    if (levelPassed) {
+      return NextResponse.json(
+        { error: "Vous avez déjà validé cette année académique" },
+        { status: 409 }
+      );
     }
+    // Create the academic record
+    const academicRecord = await prisma.anneeNote.create({
+      data: {
+        annee: year,
+        etudiant: {
+          connect: { id: user.Etudiant.id as string },
+        },
+        anneeUniv: {
+          connect: { id: academicYearId },
+        },
+        statut: status, // Default status
+        // Leave credits and average empty initially
+        credits: null,
+        moyenne: null,
+      },
+      include: {
+        anneeUniv: true,
+      },
+    });
 
     return NextResponse.json(
-      { success: false, error: errorMessage },
-      { status: error.code === "P2002" ? 409 : 500 }
+      {
+        message: "Année académique enregistrée avec succès",
+        data: academicRecord,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error saving academic year:", error);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur" },
+      { status: 500 }
     );
   }
 }
 
-export async function GET() {
+export async function DELETE(request: Request) {
   const session = await auth();
 
+  try {
+    // Verify the user is authenticated
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+    const body = await request.json();
+    const { id } = body;
+    // Get the student record associated with this user
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { etudiant: true },
+    });
+
+    if (!user?.etudiant) {
+      return NextResponse.json(
+        { error: "Étudiant non trouvé" },
+        { status: 404 }
+      );
+    }
+
+    // Verify the transcript belongs to this student
+    const transcript = await prisma.anneeNote.findUnique({
+      where: { id },
+      select: { etudiantId: true },
+    });
+
+    if (!transcript) {
+      return NextResponse.json(
+        { error: "Configuration de relevé non trouvée" },
+        { status: 404 }
+      );
+    }
+
+    if (transcript.etudiantId !== user.etudiant.id) {
+      return NextResponse.json(
+        { error: "Non autorisé à supprimer cette configuration" },
+        { status: 403 }
+      );
+    }
+
+    // Delete the transcript configuration
+    await prisma.anneeNote.delete({
+      where: { id },
+    });
+
+    return NextResponse.json(
+      { success: true, message: "Configuration supprimée avec succès" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting transcript:", error);
+    return NextResponse.json(
+      { error: "Erreur interne du serveur" },
+      { status: 500 }
+    );
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(request: Request) {
+  const session = await auth();
+  // Verify the user is authenticated
   if (!session) {
     return NextResponse.json(
-      { success: false, error: "Session non valide" },
+      { error: "Vous devez être connecté pour accéder aux relevés" },
       { status: 401 }
     );
   }
 
   try {
-    const user = await getPersonalInfos(session);
-    const etudiantId = user.Etudiant.id;
+    if (!session.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // Get all configured academic years with their structure
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { etudiant: true },
+    });
+
+    if (!user?.etudiant) {
+      return NextResponse.json({ error: "Student not found" }, { status: 404 });
+    }
+
     const transcripts = await prisma.anneeNote.findMany({
-      where: { etudiantId },
+      where: { etudiantId: user.etudiant.id },
       include: {
+        semestreNotes: {
+          include: {
+            uniteNotes: {
+              include: {
+                moduleNotes: true,
+              },
+            },
+          },
+        },
         anneeUniv: {
           include: {
             semestres: {
@@ -228,81 +211,19 @@ export async function GET() {
             },
           },
         },
-        semestreNotes: true,
+        soumission: true,
       },
-      orderBy: { annee: "desc" },
+
+      orderBy: {
+        annee: "asc",
+      },
     });
 
-    // Format the response to include all placeholders
-    const formattedTranscripts = await Promise.all(
-      transcripts.map(async (transcript) => {
-        // Get all unit notes for this academic year
-        const uniteNotes = await prisma.uniteNote.findMany({
-          where: {
-            etudiantId,
-            unite: {
-              semestre: {
-                anneeId: transcript.anneeUnivId,
-              },
-            },
-          },
-        });
-
-        // Get all module notes for this academic year
-        const moduleNotes = await prisma.moduleNote.findMany({
-          where: {
-            etudiantId,
-            module: {
-              unite: {
-                semestre: {
-                  anneeId: transcript.anneeUnivId,
-                },
-              },
-            },
-          },
-        });
-
-        return {
-          id: transcript.id,
-          year: transcript.annee,
-          level: transcript.anneeUniv.niveau,
-          moyenne: transcript.moyenne,
-          credits: transcript.credits,
-          semestres: transcript.anneeUniv.semestres.map((semestre) => ({
-            id: semestre.id,
-            nom: semestre.nom,
-            ordre: semestre.ordre,
-            note:
-              transcript.semestreNotes.find(
-                (sn) => sn.semestreId === semestre.id
-              )?.note || 0,
-            unites: semestre.unites.map((unite) => ({
-              id: unite.id,
-              nom: unite.nom,
-              note: uniteNotes.find((un) => un.uniteId === unite.id)?.note || 0,
-              modules: unite.modules.map((module) => ({
-                id: module.id,
-                nom: module.nom,
-                credits: module.credits,
-                coefficient: module.coefficient,
-                note:
-                  moduleNotes.find((mn) => mn.moduleId === module.id)?.note ||
-                  0,
-              })),
-            })),
-          })),
-        };
-      })
-    );
-
-    return NextResponse.json({
-      success: true,
-      data: formattedTranscripts,
-    });
+    return NextResponse.json(transcripts);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error fetching transcripts:", error);
     return NextResponse.json(
-      { success: false, error: "Erreur serveur" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

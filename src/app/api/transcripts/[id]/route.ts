@@ -1,214 +1,256 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/db/prisma";
-import { auth } from "@/auth";
-import getPersonalInfos from "@/utils/getPersonalInfos";
+import { NextResponse } from "next/server";
 
-export async function DELETE(
+export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    // Delete related records first to maintain referential integrity
-    await prisma.$transaction([
-      prisma.moduleNote.deleteMany({
-        where: {
-          etudiant: {
-            notesAnnees: {
-              some: {
-                id: params.id,
+    const anneeNote = await prisma.anneeNote.findUnique({
+      where: { id },
+      include: {
+        etudiant: {
+          include: {
+            user: true,
+          },
+        },
+        anneeUniv: {
+          include: {
+            semestres: {
+              include: {
+                unites: {
+                  include: {
+                    modules: true,
+                  },
+                },
               },
+              orderBy: { ordre: "asc" },
             },
           },
         },
-      }),
-      prisma.uniteNote.deleteMany({
-        where: {
-          etudiant: {
-            notesAnnees: {
-              some: {
-                id: params.id,
+        semestreNotes: {
+          include: {
+            semestre: true, // Include semester details
+            uniteNotes: {
+              include: {
+                unite: true, // Include unit details
+                moduleNotes: {
+                  include: {
+                    module: true, // Include module details
+                  },
+                },
               },
             },
           },
-        },
-      }),
-      prisma.semestreNote.deleteMany({
-        where: {
-          etudiant: {
-            notesAnnees: {
-              some: {
-                id: params.id,
-              },
+          orderBy: {
+            semestre: {
+              ordre: "asc",
             },
           },
         },
-      }),
-      prisma.anneeNote.delete({
-        where: {
-          id: params.id,
-        },
-      }),
-    ]);
+      },
+    });
 
-    return NextResponse.json({ success: true });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    if (!anneeNote) {
+      return NextResponse.json(
+        { error: "Academic year note not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: anneeNote,
+    });
   } catch (error) {
+    console.error("Error fetching transcript:", error);
     return NextResponse.json(
-      { error: "Failed to delete transcript" },
+      { error: "Failed to fetch transcript" },
       { status: 500 }
     );
   }
 }
 
-// app/api/transcripts/[id]/route.ts (PUT handler)
-
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-
-  if (!session) {
-    return NextResponse.json(
-      { success: false, error: "Session non valide" },
-      { status: 401 }
-    );
-  }
-
+  const { id } = await params;
   try {
-    const user = await getPersonalInfos(session);
-    const etudiantId = user.Etudiant.id;
-    const anneeNoteId = params.id;
-    const data = await request.json();
+    const { moduleNotes, uniteNotes, semestreNotes, anneeNote } =
+      await request.json();
 
-    // Validate request body
-    if (!data.semestres || !Array.isArray(data.semestres)) {
-      return NextResponse.json(
-        { success: false, error: "Données invalides" },
-        { status: 400 }
-      );
-    }
-
-    // Verify the transcript belongs to the student
-    const transcript = await prisma.anneeNote.findUnique({
-      where: { id: anneeNoteId, etudiantId },
-      include: { anneeUniv: { include: { semestres: true } } },
-    });
-
-    if (!transcript) {
-      return NextResponse.json(
-        { success: false, error: "Relevé non trouvé" },
-        { status: 404 }
-      );
-    }
-
-    // Update in transaction
-    const result = await prisma.$transaction(
-      async (tx) => {
-        // Update semester notes
-        await Promise.all(
-          data.semestres.map(async (semestre) => {
-            await tx.semestreNote.updateMany({
-              where: {
-                etudiantId,
-                semestreId: semestre.id,
-                anneeNoteId,
-              },
-              data: { note: semestre.note },
-            });
-
-            // Update unit notes
-            await Promise.all(
-              semestre.unites.map(async (unite) => {
-                await tx.uniteNote.updateMany({
-                  where: {
-                    etudiantId,
-                    uniteId: unite.id,
+    // Verify the AnneeNote exists
+    const existingAnneeNote = await prisma.anneeNote.findUnique({
+      where: { id },
+      include: {
+        etudiant: true,
+        anneeUniv: {
+          include: {
+            semestres: {
+              include: {
+                unites: {
+                  include: {
+                    modules: true,
                   },
-                  data: { note: unite.note },
-                });
-
-                // Update module notes
-                await Promise.all(
-                  unite.modules.map(async (Module) => {
-                    await tx.moduleNote.updateMany({
-                      where: {
-                        etudiantId,
-                        moduleId: Module.id,
-                      },
-                      data: { note: Module.note },
-                    });
-                  })
-                );
-              })
-            );
-          })
-        );
-
-        // Calculate new averages and credits
-        const semestreNotes = await tx.semestreNote.findMany({
-          where: { anneeNoteId },
-        });
-
-        const moyenne =
-          semestreNotes.reduce((sum, sn) => sum + sn.note, 0) /
-          semestreNotes.length;
-
-        const moduleNotes = await tx.moduleNote.findMany({
-          where: {
-            etudiantId,
-            module: {
-              unite: {
-                semestre: {
-                  anneeId: transcript.anneeUnivId,
                 },
               },
             },
           },
-          include: {
-            module: {
-              select: {
-                credits: true,
-              },
+        },
+      },
+    });
+
+    if (!existingAnneeNote) {
+      return NextResponse.json(
+        { error: "Academic year note not found" },
+        { status: 404 }
+      );
+    }
+
+    // Start transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // First update the year note
+      await tx.anneeNote.update({
+        where: { id },
+        data: {
+          moyenne: anneeNote.moyenne,
+          credits: anneeNote.credits,
+          statut: anneeNote.statut,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Update semester notes (these need to be created/updated first as they're referenced by unite notes)
+      const createdSemestreNotes = new Map();
+
+      for (const note of semestreNotes) {
+        const semestreNote = await tx.semestreNote.upsert({
+          where: {
+            etudiantId_semestreId_anneeNoteId: {
+              etudiantId: existingAnneeNote.etudiantId,
+              semestreId: note.semestreId,
+              anneeNoteId: id,
             },
           },
+          update: {
+            note: note.note,
+            credits: note.credits,
+            updatedAt: new Date(),
+          },
+          create: {
+            etudiantId: existingAnneeNote.etudiantId,
+            semestreId: note.semestreId,
+            anneeNoteId: id,
+            note: note.note,
+            credits: note.credits,
+          },
+        });
+        createdSemestreNotes.set(note.semestreId, semestreNote.id);
+      }
+
+      // Update unit notes (link them to their corresponding semester notes)
+      const createdUniteNotes = new Map();
+
+      for (const note of uniteNotes) {
+        // Find which semester this unit belongs to
+        const unite = await tx.unite.findUnique({
+          where: { id: note.uniteId },
+          select: { semestreId: true },
         });
 
-        const credits = moduleNotes.reduce((sum, mn) => {
-          return mn.note >= 10 ? sum + mn.module.credits : sum;
-        }, 0);
-
-        // Update academic year summary
-        const updatedAnneeNote = await tx.anneeNote.update({
-          where: { id: anneeNoteId },
-          data: { moyenne, credits },
-        });
-
-        // Update student progression if needed
-        if (user.Etudiant.progression !== "transcriptFilled") {
-          await tx.etudiant.update({
-            where: { id: etudiantId },
-            data: { progression: "transcriptFilled" },
-          });
+        if (!unite) {
+          throw new Error(`Unite with id ${note.uniteId} not found`);
         }
 
-        return updatedAnneeNote;
-      },
-      {
-        maxWait: 20000,
-        timeout: 15000,
-      }
-    );
+        const semestreNoteId = createdSemestreNotes.get(unite.semestreId);
+        if (!semestreNoteId) {
+          throw new Error(
+            `SemestreNote not found for semestre ${unite.semestreId}`
+          );
+        }
 
-    return NextResponse.json({
-      success: true,
-      message: "Relevé mis à jour avec succès",
-      data: result,
+        const uniteNote = await tx.uniteNote.upsert({
+          where: {
+            etudiantId_uniteId: {
+              etudiantId: existingAnneeNote.etudiantId,
+              uniteId: note.uniteId,
+            },
+          },
+          update: {
+            note: note.note,
+            credits: note.credits,
+            semestreNoteId: semestreNoteId,
+            updatedAt: new Date(),
+          },
+          create: {
+            etudiantId: existingAnneeNote.etudiantId,
+            uniteId: note.uniteId,
+            note: note.note,
+            credits: note.credits,
+            semestreNoteId: semestreNoteId,
+          },
+        });
+        createdUniteNotes.set(note.uniteId, uniteNote.id);
+      }
+
+      // Update module notes (link them to their corresponding unit notes)
+      for (const note of moduleNotes) {
+        // Find which unit this module belongs to
+        const Module = await tx.module.findUnique({
+          where: { id: note.moduleId },
+          select: { uniteId: true },
+        });
+
+        if (!Module) {
+          throw new Error(`Module with id ${note.moduleId} not found`);
+        }
+
+        const uniteNoteId = createdUniteNotes.get(Module.uniteId);
+        if (!uniteNoteId) {
+          throw new Error(`UniteNote not found for unite ${Module.uniteId}`);
+        }
+
+        await tx.moduleNote.upsert({
+          where: {
+            etudiantId_moduleId: {
+              etudiantId: existingAnneeNote.etudiantId,
+              moduleId: note.moduleId,
+            },
+          },
+          update: {
+            note: note.note,
+            credits: note.credits,
+            uniteNoteId: uniteNoteId,
+            updatedAt: new Date(),
+          },
+          create: {
+            etudiantId: existingAnneeNote.etudiantId,
+            moduleId: note.moduleId,
+            note: note.note,
+            credits: note.credits,
+            uniteNoteId: uniteNoteId,
+          },
+        });
+      }
+
+      // Update student progression
+      await tx.etudiant.update({
+        where: { id: existingAnneeNote.etudiantId },
+        data: {
+          progression: "transcriptFilled",
+        },
+      });
+
+      return { success: true };
     });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error updating transcript:", error);
     return NextResponse.json(
-      { success: false, error: "Erreur serveur" },
+      { error: "Failed to update transcript", details: error.message },
       { status: 500 }
     );
   }

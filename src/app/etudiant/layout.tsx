@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import SidebarNavigation from "@/components/etudiant-ui/student-sidebar";
 import getPersonalInfos from "@/utils/getPersonalInfos";
+import { SessionProvider } from "next-auth/react";
 
 export default async function EtudiantLayout({
   children,
@@ -13,8 +14,22 @@ export default async function EtudiantLayout({
   if (!session?.user) {
     redirect("/login");
   }
-
-  const personalInfo = await getPersonalInfos(session);
-  const studentProgression = personalInfo.Etudiant.progression;
-  return <SidebarNavigation studentProgression={studentProgression}>{children}</SidebarNavigation>;
+  const user = await getPersonalInfos(session);
+  if (!user) {
+    redirect("/login");
+  }
+  if (user.Utilisateur.role !== "ETUDIANT") {
+    redirect("/login");
+  }
+  if (!user.Etudiant) {
+    redirect("/login");
+  }
+  const studentProgression = user.Etudiant.progression;
+  return (
+    <SessionProvider session={session}>
+      <SidebarNavigation studentProgression={studentProgression}>
+        {children}
+      </SidebarNavigation>
+    </SessionProvider>
+  );
 }

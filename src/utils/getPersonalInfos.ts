@@ -13,27 +13,29 @@ export default async function getPersonalInfos(
     throw new Error("User email not found");
   }
 
-  const Utilisateur = await prisma.utilisateur.findUnique({
+  const user = await prisma.user.findUnique({
     where: {
       email: session.user?.email,
     },
   });
 
-  if (!Utilisateur) {
+  if (!user) {
     throw new Error("User not found");
   }
 
   const Etudiant = await prisma.etudiant.findUnique({
     where: {
-      id: Utilisateur.id,
+      userId: user.id,
     },
   });
 
   if (!Etudiant) {
-    throw new Error("Etudiant not found");
+    return {
+      Utilisateur: user,
+    };
   }
-  const etudiantUtilisateur: EtudiantUtilisateur = {
-    Utilisateur,
+  const etudiantUtilisateur = {
+    Utilisateur: user,
     Etudiant,
   };
   return etudiantUtilisateur;

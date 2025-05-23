@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 export async function updateInfo(previousState: unknown, formData: FormData) {
   const {
     id,
-    numeroInscription,
     dateNaissance,
     lieuNaissance,
     domaine,
@@ -18,7 +17,6 @@ export async function updateInfo(previousState: unknown, formData: FormData) {
   } = Object.fromEntries(formData);
   const studentDetails = {
     id: id as string,
-    numeroInscription: numeroInscription as string,
     dateNaissance: new Date(dateNaissance as string),
     lieuNaissance: lieuNaissance as string,
     domaine: domaine as string,
@@ -31,7 +29,6 @@ export async function updateInfo(previousState: unknown, formData: FormData) {
     await prisma.etudiant.update({
       where: { id: studentDetails.id },
       data: {
-        numeroInscription: studentDetails.numeroInscription,
         dateNaissance: studentDetails.dateNaissance,
         lieuNaissance: studentDetails.lieuNaissance,
         domaine: studentDetails.domaine,

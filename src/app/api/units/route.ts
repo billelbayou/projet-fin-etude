@@ -3,12 +3,14 @@ import { prisma } from "@/db/prisma";
 
 export async function POST(request: Request) {
   try {
-    const { name, semesterId } = await request.json();
+    const { name, credits, coefficient, semesterId } = await request.json();
 
     // Create new unit
     const newUnit = await prisma.unite.create({
       data: {
         nom: name,
+        credits: credits,
+        coefficient: coefficient,
         semestreId: semesterId,
       },
     });
