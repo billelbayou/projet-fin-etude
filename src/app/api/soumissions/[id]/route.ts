@@ -39,9 +39,10 @@ export async function POST(
     }
 
     return NextResponse.json(submission);
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to process review" },
+      { error: "Failed to process review", details: error.message },
       { status: 500 }
     );
   }

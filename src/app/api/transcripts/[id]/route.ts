@@ -111,7 +111,7 @@ export async function PUT(
     }
 
     // Start transaction
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // First update the year note
       await tx.anneeNote.update({
         where: { id },
@@ -248,7 +248,8 @@ export async function PUT(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error("Error updating transcript:", error);
     return NextResponse.json(
       { error: "Failed to update transcript", details: error.message },

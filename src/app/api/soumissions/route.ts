@@ -29,9 +29,10 @@ export async function GET() {
     });
 
     return NextResponse.json(submissions);
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to fetch submissions" },
+      { error: "Failed to fetch submissions", details: error.message},
       { status: 500 }
     );
   }

@@ -83,7 +83,8 @@ export async function POST(
       message: "Submission created successfully",
       data: soumission,
     });
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error("Error creating submission:", error);
     return NextResponse.json(
       { error: "Failed to create submission", details: error.message },
@@ -217,7 +218,8 @@ export async function PUT(
       message: "Submission updated successfully",
       data: updatedSoumission,
     });
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error("Error updating submission:", error);
     return NextResponse.json(
       { error: "Failed to update submission", details: error.message },
@@ -274,7 +276,8 @@ export async function DELETE(
       success: true,
       message: "Submission deleted successfully",
     });
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error("Error deleting submission:", error);
     return NextResponse.json(
       { error: "Failed to delete submission", details: error.message },
