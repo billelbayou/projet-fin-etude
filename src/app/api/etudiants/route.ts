@@ -44,7 +44,8 @@ export async function POST(request: Request) {
       matricule,
       departementId: chef?.managedDepartment?.id,
     };
-    if (Object.values(requiredFields).some((field) => !field)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (Object.values(requiredFields).some((field: any) => !field)) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis" },
         { status: 400 }
@@ -82,7 +83,8 @@ export async function POST(request: Request) {
 
     const hashedPassword = await hash(motDePasse, 12);
 
-    const result = await prisma.$transaction(async (prisma) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await prisma.$transaction(async (prisma: any) => {
       const user = await prisma.user.create({
         data: {
           email,
