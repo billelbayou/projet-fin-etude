@@ -83,7 +83,7 @@ export async function POST(
       message: "Submission created successfully",
       data: soumission,
     });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Error creating submission:", error);
     return NextResponse.json(
@@ -95,14 +95,14 @@ export async function POST(
 
 export async function GET(
   request: Request,
-  { params }: { params: { anneeNoteId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { anneeNoteId } = params;
+    const { id } = await params;
 
     // Get the submission for this academic year note
     const soumission = await prisma.soumission.findUnique({
-      where: { anneeNoteId: anneeNoteId },
+      where: { anneeNoteId: id },
       include: {
         anneeNote: {
           include: {
@@ -218,7 +218,7 @@ export async function PUT(
       message: "Submission updated successfully",
       data: updatedSoumission,
     });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Error updating submission:", error);
     return NextResponse.json(
@@ -276,7 +276,7 @@ export async function DELETE(
       success: true,
       message: "Submission deleted successfully",
     });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Error deleting submission:", error);
     return NextResponse.json(
