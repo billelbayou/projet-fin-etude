@@ -111,7 +111,8 @@ export async function PUT(
     }
 
     // Start transaction
-    await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.$transaction(async (tx: any) => {
       // First update the year note
       await tx.anneeNote.update({
         where: { id },
