@@ -11,7 +11,7 @@ export default function LogoutButton() {
     <form action={dispatch}>
       <button
         type="submit"
-        className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 hover:text-red-600 transition-colors"
+        className="flex cursor-pointer items-center gap-2 text-sm text-red-400 hover:text-red-600 transition-colors"
       >
         <FiLogOut className="w-4 h-4" />
         <span>{isPending ? "Se déconnecter..." : "Se déconnecter"}</span>

@@ -91,6 +91,13 @@ export default function AjouterEtudiantPage() {
         </div>
 
         <div className="flex justify-end gap-4 pt-4">
+          <Button
+            className="px-4 py-2 border rounded hover:bg-gray-100"
+            type="submit"
+            disabled={isPending}
+          >
+            {isPending ? "Création en cours..." : "Créer l'étudiant"}
+          </Button>
           <button
             type="button"
             className="px-4 py-2 border rounded hover:bg-gray-100"
@@ -98,9 +105,6 @@ export default function AjouterEtudiantPage() {
           >
             Annuler
           </button>
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Création en cours..." : "Créer l'étudiant"}
-          </Button>
         </div>
       </form>
     </div>

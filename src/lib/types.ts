@@ -3,11 +3,13 @@ import { ProgressionEtudiant, $Enums } from "@prisma/client";
 export const Domains = [
   "Mathématiques et Informatique",
   "Sciences et Technologie",
+  "Agriculture et Environnement",
 ];
 
 export const Filieres = {
   MI: ["Mathématiques", "Informatique"],
   ST: ["Sciences et Technologie"],
+  AG: ["Agriculture", "Environnement"],
 };
 
 export const Specialites = {
@@ -18,6 +20,7 @@ export const Specialites = {
     "Genie civil",
     "Genie energetique",
   ],
+  AG: ["Agronomie", "Foresterie", "Environnement"],
 };
 
 export interface EtudiantUtilisateur {

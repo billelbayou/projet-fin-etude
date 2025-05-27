@@ -1,60 +1,10 @@
 "use client";
 
+import { AnneeNote, Module, Semestre, Unite } from "@/types";
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-interface Module {
-  id: string;
-  nom: string;
-  coefficient: number;
-  credits: number;
-  uniteId: string;
-}
-
-interface Unite {
-  id: string;
-  nom: string;
-  coefficient: number;
-  credits: number;
-  semestreId: string;
-  modules: Module[];
-}
-
-interface Semestre {
-  id: string;
-  nom: string;
-  coefficient: number;
-  credits: number;
-  anneeId: string;
-  unites: Unite[];
-}
-
-interface AnneeUniv {
-  id: string;
-  nom: string;
-  semestres: Semestre[];
-}
-
-interface Etudiant {
-  id: string;
-  user: {
-    nom: string;
-    prenom: string;
-  };
-  matricule: string;
-}
-
-interface AnneeNote {
-  id: string;
-  annee: string;
-  statut: string;
-  moyenne: number | null;
-  credits: number | null;
-  etudiant: Etudiant;
-  anneeUniv: AnneeUniv;
-  semestreNotes: any[]; // Adjust this based on actual structure
-}
 
 export default function RemplirReleve() {
   const { id } = useParams();
@@ -85,6 +35,7 @@ export default function RemplirReleve() {
           )
         );
         setModuleGrades(initialGrades);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -103,28 +54,34 @@ export default function RemplirReleve() {
   const calculateCredits = (note: number, totalCredits: number) =>
     note >= 10 ? totalCredits : 0;
 
-  const calculateUnitAverage = (unite: Unite) => {
-    const total = unite.modules.reduce((sum, m) => {
-      const note = moduleGrades[m.id] || 0;
-      return sum + note * m.coefficient;
-    }, 0);
-    const coefTotal = unite.modules.reduce((sum, m) => sum + m.coefficient, 0);
-    return coefTotal ? total / coefTotal : 0;
-  };
+  const calculateUnitAverage = React.useCallback(
+    (unite: Unite) => {
+      const total = unite.modules.reduce((sum, m) => {
+        const note = moduleGrades[m.id] || 0;
+        return sum + note * m.coefficient;
+      }, 0);
+      const coefTotal = unite.modules.reduce((sum, m) => sum + m.coefficient, 0);
+      return coefTotal ? total / coefTotal : 0;
+    },
+    [moduleGrades]
+  );
 
-  const calculateSemesterAverage = (semestre: Semestre) => {
-    const total = semestre.unites.reduce((sum, u) => {
-      const avg = calculateUnitAverage(u);
-      return sum + avg * u.coefficient;
-    }, 0);
-    const coefTotal = semestre.unites.reduce(
-      (sum, u) => sum + u.coefficient,
-      0
-    );
-    return coefTotal ? total / coefTotal : 0;
-  };
+  const calculateSemesterAverage = React.useCallback(
+    (semestre: Semestre) => {
+      const total = semestre.unites.reduce((sum, u) => {
+        const avg = calculateUnitAverage(u);
+        return sum + avg * u.coefficient;
+      }, 0);
+      const coefTotal = semestre.unites.reduce(
+        (sum, u) => sum + u.coefficient,
+        0
+      );
+      return coefTotal ? total / coefTotal : 0;
+    },
+    [calculateUnitAverage]
+  );
 
-  const calculateYearAverage = () => {
+  const calculateYearAverage = React.useCallback(() => {
     if (!anneeNote) return 0;
     const total = anneeNote.anneeUniv.semestres.reduce((sum, s) => {
       const avg = calculateSemesterAverage(s);
@@ -135,7 +92,7 @@ export default function RemplirReleve() {
       0
     );
     return coefTotal ? total / coefTotal : 0;
-  };
+  }, [anneeNote, calculateSemesterAverage]);
 
   const calculateYearTotalCredits = () => {
     if (!anneeNote) return 0;
@@ -155,7 +112,7 @@ export default function RemplirReleve() {
     if (anneeNote) {
       setYearAverage(calculateYearAverage());
     }
-  }, [moduleGrades, anneeNote]);
+  }, [moduleGrades, anneeNote, calculateYearAverage]);
 
   const totalCreditsObtained = calculateYearTotalCredits();
 

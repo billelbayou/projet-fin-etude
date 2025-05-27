@@ -1,16 +1,16 @@
 "use client";
+import { AnneeNote, Semestre } from "@/types";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
 export default function RevisionSoumission() {
   const { data: session } = useSession();
-  const [nonSoumis, setNonSoumis] = useState<any[]>([]);
-  const [soumis, setSoumis] = useState<any[]>([]);
+  const [nonSoumis, setNonSoumis] = useState<AnneeNote[]>([]);
+  const [soumis, setSoumis] = useState<AnneeNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCommentId, setShowCommentId] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAnneeNotes = async () => {
@@ -23,10 +23,13 @@ export default function RevisionSoumission() {
         }
 
         const data = await response.json();
-        const validNotes = data.filter((note: any) => note.statut !== null);
+        const validNotes = data.filter(
+          (note: AnneeNote) => note.statut !== null
+        );
 
-        setNonSoumis(validNotes.filter((note: any) => !note.soumission));
-        setSoumis(validNotes.filter((note: any) => note.soumission));
+        setNonSoumis(validNotes.filter((note: AnneeNote) => !note.soumission));
+        setSoumis(validNotes.filter((note: AnneeNote) => note.soumission));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setError(err.message || "Unknown error");
       } finally {
@@ -53,13 +56,14 @@ export default function RevisionSoumission() {
       const updatedResponse = await fetch(`/api/transcripts`);
       const updatedData = await updatedResponse.json();
       const validNotes = updatedData.filter(
-        (note: any) => note.statut !== null
+        (note: AnneeNote) => note.statut !== null
       );
 
-      setNonSoumis(validNotes.filter((note: any) => !note.soumission));
-      setSoumis(validNotes.filter((note: any) => note.soumission));
+      setNonSoumis(validNotes.filter((note: AnneeNote) => !note.soumission));
+      setSoumis(validNotes.filter((note: AnneeNote) => note.soumission));
 
       alert("Soumission envoyée avec succès!");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       alert("Erreur lors de la soumission: " + err.message);
     }
@@ -182,111 +186,117 @@ export default function RevisionSoumission() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {soumis.map((note) => (
-                  <React.Fragment key={note.id}>
-                    <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {note.anneeUniv.nom}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSubmissionStatusColor(
-                              note.soumission.statut
-                            )}`}
-                          >
-                            {getSubmissionStatusText(note.soumission.statut)}
-                          </span>
-                          {note.soumission.statut === "REJECTED" && (
-                            <button
-                              onClick={() => toggleComment(note.id)}
-                              className="ml-2 text-xs text-red-500 hover:text-red-700"
+                {soumis.map((note) =>
+                  !note.soumission ? (
+                    // If note.soumission is null, skip rendering this row
+                    <React.Fragment key={note.id} />
+                  ) : (
+                    // Skip if note is null
+                    <React.Fragment key={note.id}>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {note.anneeUniv.nom}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSubmissionStatusColor(
+                                note.soumission.statut
+                              )}`}
                             >
-                              {showCommentId === note.id
-                                ? "Masquer"
-                                : "Voir commentaire"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div>
-                          <span className="font-medium">Soumis:</span>{" "}
-                          {new Date(
-                            note.soumission.dateSoumission
-                          ).toLocaleDateString()}
-                        </div>
-                        {note.soumission.dateValidation && (
-                          <div className="text-xs text-gray-500">
-                            <span className="font-medium">Traité:</span>{" "}
+                              {getSubmissionStatusText(note.soumission.statut)}
+                            </span>
+                            {note.soumission.statut === "REJECTED" && (
+                              <button
+                                onClick={() => toggleComment(note.id)}
+                                className="ml-2 text-xs text-red-500 hover:text-red-700"
+                              >
+                                {showCommentId === note.id
+                                  ? "Masquer"
+                                  : "Voir commentaire"}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div>
+                            <span className="font-medium">Soumis:</span>{" "}
                             {new Date(
-                              note.soumission.dateValidation
+                              note.soumission.dateSoumission
                             ).toLocaleDateString()}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <Link
-                            href={`/etudiant/revision-soumission/preview/${note.id}`}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            Prévisualiser
-                          </Link>
-                          {note.soumission.statut === "APPROVED" && (
-                            <Link
-                              href={`/etudiant/revision-soumission/ministerial/${note.id}`}
-                              passHref
-                              className="text-blue-600 hover:text-blue-900 flex items-center"
-                            >
-                              <svg
-                                className="w-4 h-4 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                              </svg>
-                              Voir le format ministériel
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    {note.soumission.statut === "REJECTED" &&
-                      showCommentId === note.id && (
-                        <tr className="bg-red-50">
-                          <td colSpan={4} className="px-6 py-4">
-                            <div className="text-red-700">
-                              <strong>
-                                Commentaire du chef de département:
-                              </strong>
-                              <p className="mt-1 whitespace-pre-wrap">
-                                {note.soumission.commentaire ||
-                                  "Aucun commentaire fourni"}
-                              </p>
-                              {note.soumission.statut === "REJECTED" && (
-                                <button
-                                  onClick={() =>
-                                    handleSubmitToDepartment(note.id)
-                                  }
-                                  className="mt-2 text-sm text-green-600 hover:text-green-800 font-medium"
-                                >
-                                  Resoumettre
-                                </button>
-                              )}
+                          {note.soumission.dateValidation && (
+                            <div className="text-xs text-gray-500">
+                              <span className="font-medium">Traité:</span>{" "}
+                              {new Date(
+                                note.soumission.dateValidation
+                              ).toLocaleDateString()}
                             </div>
-                          </td>
-                        </tr>
-                      )}
-                  </React.Fragment>
-                ))}
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <Link
+                              href={`/etudiant/revision-soumission/preview/${note.id}`}
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              Prévisualiser
+                            </Link>
+                            {note.soumission.statut === "APPROVED" && (
+                              <Link
+                                href={`/etudiant/revision-soumission/ministerial/${note.id}`}
+                                passHref
+                                className="text-blue-600 hover:text-blue-900 flex items-center"
+                              >
+                                <svg
+                                  className="w-4 h-4 mr-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                                Voir le format ministériel
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {note.soumission.statut === "REJECTED" &&
+                        showCommentId === note.id && (
+                          <tr className="bg-red-50">
+                            <td colSpan={4} className="px-6 py-4">
+                              <div className="text-red-700">
+                                <strong>
+                                  Commentaire du chef de département:
+                                </strong>
+                                <p className="mt-1 whitespace-pre-wrap">
+                                  {note.soumission.commentaire ||
+                                    "Aucun commentaire fourni"}
+                                </p>
+                                {note.soumission.statut === "REJECTED" && (
+                                  <button
+                                    onClick={() =>
+                                      handleSubmitToDepartment(note.id)
+                                    }
+                                    className="mt-2 text-sm text-green-600 hover:text-green-800 font-medium"
+                                  >
+                                    Resoumettre
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                    </React.Fragment>
+                  )
+                )}
               </tbody>
             </table>
           </div>
@@ -353,9 +363,9 @@ function getSubmissionStatusColor(status: string) {
   }
 }
 
-function getTotalCredits(anneeNote: any) {
+function getTotalCredits(anneeNote: AnneeNote) {
   return anneeNote.anneeUniv.semestres.reduce(
-    (total: number, semestre: any) => total + semestre.credits,
+    (total: number, semestre: Semestre) => total + semestre.credits,
     0
   );
 }

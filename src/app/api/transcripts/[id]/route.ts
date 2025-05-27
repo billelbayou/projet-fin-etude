@@ -81,6 +81,7 @@ export async function PUT(
     const { moduleNotes, uniteNotes, semestreNotes, anneeNote } =
       await request.json();
 
+    const anneeCredits = anneeNote >= 10 ? 60 : anneeNote.credits;
     // Verify the AnneeNote exists
     const existingAnneeNote = await prisma.anneeNote.findUnique({
       where: { id },
@@ -116,7 +117,7 @@ export async function PUT(
         where: { id },
         data: {
           moyenne: anneeNote.moyenne,
-          credits: anneeNote.credits,
+          credits: anneeCredits,
           statut: anneeNote.statut,
           updatedAt: new Date(),
         },

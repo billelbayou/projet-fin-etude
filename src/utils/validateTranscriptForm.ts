@@ -24,19 +24,20 @@ export function validateTranscriptForm(data: TranscriptFormData) {
   [data.s1_moyenne, data.s2_moyenne].forEach((moyenne, index) => {
     const num = parseFloat(moyenne);
     if (isNaN(num)) {
-      errors[`s${index + 1}_moyenne`] = "Valeur requise";
+      errors[`s${index + 1}_moyenne` as keyof TranscriptFormData] = "Valeur requise";
     } else if (num < 0 || num > 20) {
-      errors[`s${index + 1}_moyenne`] = "Doit être entre 0 et 20";
+      errors[`s${index + 1}_moyenne` as keyof TranscriptFormData] = "Doit être entre 0 et 20";
     }
   });
 
   // Validate credits (0-30)
-  [data.s1_credits, data.s2_credits].forEach((credits, index) => {
+  (["s1_credits", "s2_credits"] as const).forEach((key) => {
+    const credits = data[key];
     const num = parseInt(credits);
     if (isNaN(num)) {
-      errors[`s${index + 1}_credits`] = "Valeur requise";
+      errors[key] = "Valeur requise";
     } else if (num < 0 || num > 30) {
-      errors[`s${index + 1}_credits`] = "Doit être entre 0 et 30";
+      errors[key] = "Doit être entre 0 et 30";
     }
   });
 

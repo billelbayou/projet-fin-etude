@@ -2,7 +2,9 @@
 
 import { AnneeNote } from "@/types";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { JSX, useEffect, useState } from "react";
+import Image from "next/image";
+import logo from "../../../../../../public/Logo-umbb-crsic_1.png";
 
 export default function Pdf() {
   const { id } = useParams();
@@ -51,7 +53,7 @@ export default function Pdf() {
       );
     }
 
-    const rows = [];
+    const rows: JSX.Element[] = [];
 
     // Process each semestre note from the transcript
     transcript.semestreNotes.forEach((semestreNote, semestreIndex) => {
@@ -90,7 +92,7 @@ export default function Pdf() {
                 className="border border-gray-300 p-2 text-center"
                 rowSpan={uniteNote.moduleNotes.length}
               >
-                {unite.nom.includes("Fondamentale")
+                {unite.nom.includes("uef")
                   ? "Fondamentale"
                   : unite.nom.includes("Transversale")
                   ? "Transversale"
@@ -130,7 +132,7 @@ export default function Pdf() {
           row.push(
             <td
               key={`matiere-${semestreIndex}-${uniteIndex}-${matiereIndex}`}
-              className="border border-gray-300 p-2"
+              className="border border-gray-300 p-2 whitespace-nowrap min-w-[200px]"
             >
               {Module.nom}
             </td>
@@ -275,7 +277,38 @@ export default function Pdf() {
 
   return (
     <div className="p-6 min-h-screen">
-      <div className="max-w-full overflow-x-auto rounded-lg shadow-lg">
+      <div className="max-w-full overflow-x-auto rounded-lg shadow-lg p-5">
+        <div className="flex items-center mb-4">
+          <Image src={logo} alt="UMBB" width={50} height={50} />
+          <div className="ml-4">
+            <h2>University Mhamed Bougerra</h2>
+            <h2>Faculté des Sciences et de la Technologie</h2>
+          </div>
+        </div>
+        <h2 className="text-center text-2xl font-bold mb-4">Relevé de notes</h2>
+        <h2 className="mb-4">Année universitaire : {transcript?.annee}</h2>
+        <div className="flex w-full justify-between ">
+          <h2 className="mb-4">Nom : {transcript?.etudiant.user.nom}</h2>
+          <h2 className="mb-4">Prenom : {transcript?.etudiant.user.prenom}</h2>
+          <h2 className="mb-4">
+            Date et lieu de naissance:{" "}
+            {transcript?.etudiant.dateNaissance
+              ? new Date(transcript.etudiant.dateNaissance).toLocaleDateString()
+              : ""}{" "}
+            á {transcript?.etudiant.lieuNaissance}
+          </h2>
+        </div>
+        <h2 className="mb-4">Matricule : {transcript?.etudiant.matricule}</h2>
+        <div className="flex w-full justify-between ">
+          <h2 className="mb-4">Domaine : {transcript?.etudiant.domaine}</h2>
+          <h2 className="mb-4">Filière : {transcript?.etudiant.filiere}</h2>
+          <h2 className="mb-4">
+            Spécialité : {transcript?.etudiant.specialite}
+          </h2>
+        </div>
+        <h2 className="mb-2">
+          Diplôme Préparé : {transcript?.etudiant.typeDiplome}
+        </h2>
         <table className="w-full border-collapse border border-gray-300 text-sm">
           <thead>
             <tr>
@@ -343,7 +376,7 @@ export default function Pdf() {
               <th className="border border-gray-300 p-2 text-center font-medium">
                 Coef
               </th>
-              <th className="border border-gray-300 p-2 text-center font-medium ">
+              <th className="border border-gray-300 p-2 text-center font-medium min-w-[200px]">
                 Intitulés
               </th>
               <th className="border border-gray-300 p-2 text-center font-medium">
@@ -383,6 +416,17 @@ export default function Pdf() {
           </thead>
           <tbody>{renderTableRows()}</tbody>
         </table>
+        <div className="mt-4 flex justify-between">
+          <h2>Moyenne Anuelle : {transcript?.moyenne?.toFixed(2)}</h2>
+          <h2>
+            Total des crédits cumulés pour l&apos;année (S1+S2) :{" "}
+            {transcript?.credits}
+          </h2>
+          <h2>
+            Total des crédits cumulés dans le cursus : {transcript?.credits}
+          </h2>
+        </div>
+        <h1>Décision : {transcript?.statut}</h1>
       </div>
     </div>
   );

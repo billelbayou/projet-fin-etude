@@ -28,7 +28,7 @@ export default function SuccessPage() {
         </p>
         <div className="flex justify-center">
           <Link
-            href="/admin/canevas-releves"
+            href="/chef-departemenet/canevas-releves"
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2"
           >
             Retour à la liste des canevas

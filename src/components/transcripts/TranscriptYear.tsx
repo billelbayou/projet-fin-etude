@@ -45,7 +45,7 @@ export default function TranscriptYear({
                           min="0"
                           max="20"
                           step="0.01"
-                          value={module.ModuleNote[0]?.note?.toFixed(2) || ""}
+                          value={module.notes[0]?.note?.toFixed(2) || ""}
                           onChange={(e) =>
                             onGradeChange(
                               module.id,
@@ -60,15 +60,13 @@ export default function TranscriptYear({
                   ))}
                 </div>
                 <div className="mt-3 text-right font-medium">
-                  Moyenne Unité:{" "}
-                  {unite.UniteNote[0]?.note?.toFixed(2) || "0.00"}
+                  Moyenne Unité: {unite.notes[0]?.note?.toFixed(2) || "0.00"}
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-4 text-right text-lg font-bold">
-            Moyenne Semestre:{" "}
-            {semestre.SemestreNote[0]?.note?.toFixed(2) || "0.00"}
+            Moyenne Semestre: {semestre.notes[0]?.note?.toFixed(2) || "0.00"}
           </div>
         </div>
       ))}
