@@ -174,7 +174,8 @@ export async function PUT(
     }
 
     // Update the submission
-    const updatedSoumission = await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updatedSoumission = await prisma.$transaction(async (tx: any) => {
       // Update submission
       const soumission = await tx.soumission.update({
         where: { anneeNoteId: id },
@@ -259,7 +260,8 @@ export async function DELETE(
     }
 
     // Delete the submission and update student progression
-    await prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.$transaction(async (tx: any) => {
       await tx.soumission.delete({
         where: { anneeNoteId: id },
       });
