@@ -1,4 +1,6 @@
 // app/revision-soumission/preview/[id]/page.tsx
+import { ModuleNote, SemestreNote, UniteNote } from "@/types";
+import { getTotalCredits } from "@/utils/getCredits";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import React from "react";
@@ -72,7 +74,7 @@ export default async function PreviewPage({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {anneeNote.semestreNotes?.map((semestreNote: any) => (
+              {anneeNote.semestreNotes?.map((semestreNote: SemestreNote) => (
                 <React.Fragment key={semestreNote.id}>
                   {/* Semester Row */}
                   <tr className="bg-blue-50 font-semibold">
@@ -91,7 +93,7 @@ export default async function PreviewPage({
                   </tr>
 
                   {/* Units under this semester */}
-                  {semestreNote.uniteNotes?.map((uniteNote: any) => (
+                  {semestreNote.uniteNotes?.map((uniteNote: UniteNote) => (
                     <React.Fragment key={uniteNote.id}>
                       <tr className="bg-gray-50">
                         <td className="px-10 py-3 text-sm text-gray-700">
@@ -109,7 +111,7 @@ export default async function PreviewPage({
                       </tr>
 
                       {/* Modules under this unit */}
-                      {uniteNote.moduleNotes?.map((moduleNote: any) => (
+                      {uniteNote.moduleNotes?.map((moduleNote: ModuleNote) => (
                         <tr key={moduleNote.id} className="hover:bg-gray-25">
                           <td className="px-16 py-2 text-sm text-gray-600">
                             📄 {moduleNote.module?.nom}
@@ -214,13 +216,4 @@ function getStatusTextColor(status: string) {
     default:
       return "text-gray-600";
   }
-}
-
-function getTotalCredits(anneeNote: any) {
-  if (!anneeNote.anneeUniv?.semestres) return 0;
-
-  return anneeNote.anneeUniv.semestres.reduce(
-    (total: number, semestre: any) => total + (semestre.credits || 0),
-    0
-  );
 }

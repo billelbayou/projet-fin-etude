@@ -1,5 +1,6 @@
 // app/revision-soumission/preview/[id]/page.tsx
-import { AnneeNote, ModuleNote, Semestre, SemestreNote, UniteNote } from "@/types";
+import { ModuleNote, SemestreNote, UniteNote } from "@/types";
+import { getTotalCredits } from "@/utils/getCredits";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import React from "react";
@@ -214,13 +215,4 @@ function getStatusTextColor(status: string) {
     default:
       return "text-gray-600";
   }
-}
-
-function getTotalCredits(anneeNote: AnneeNote) {
-  if (!anneeNote.anneeUniv?.semestres) return 0;
-
-  return anneeNote.anneeUniv.semestres.reduce(
-    (total: number, semestre: Semestre) => total + (semestre.credits || 0),
-    0
-  );
 }

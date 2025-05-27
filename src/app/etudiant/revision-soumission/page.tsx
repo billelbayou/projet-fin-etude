@@ -1,5 +1,6 @@
 "use client";
-import { AnneeNote, Semestre } from "@/types";
+import { AnneeNote } from "@/types";
+import { getTotalCredits } from "@/utils/getCredits";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -361,11 +362,4 @@ function getSubmissionStatusColor(status: string) {
     default:
       return "bg-gray-100 text-gray-800";
   }
-}
-
-function getTotalCredits(anneeNote: AnneeNote) {
-  return anneeNote.anneeUniv.semestres.reduce(
-    (total: number, semestre: Semestre) => total + semestre.credits,
-    0
-  );
 }

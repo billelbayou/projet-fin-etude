@@ -1,5 +1,6 @@
 "use client";
-import { AnneeNote, Semestre, Soumission } from "@/types";
+import { Soumission } from "@/types";
+import { getTotalCredits } from "@/utils/getCredits";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -9,7 +10,8 @@ export default function ReviewSubmissions() {
   const [submissions, setSubmissions] = useState<Soumission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubmission, setSelectedSubmission] = useState<Soumission | null>(null);
+  const [selectedSubmission, setSelectedSubmission] =
+    useState<Soumission | null>(null);
   const [decision, setDecision] = useState<"APPROVED" | "REJECTED" | "REVISED">(
     "APPROVED"
   );
@@ -27,7 +29,7 @@ export default function ReviewSubmissions() {
 
         const data = await response.json();
         setSubmissions(data);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setError(err.message || "Unknown error");
       } finally {
@@ -68,7 +70,7 @@ export default function ReviewSubmissions() {
       setDecision("APPROVED");
 
       alert("Décision enregistrée avec succès!");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       alert("Erreur lors de l'enregistrement: " + err.message);
     }
@@ -343,11 +345,4 @@ function getSubmissionStatusColor(status: string) {
     default:
       return "bg-gray-100 text-gray-800";
   }
-}
-
-function getTotalCredits(anneeNote: AnneeNote) {
-  return anneeNote.anneeUniv.semestres.reduce(
-    (total: number, semestre: Semestre) => total + semestre.credits,
-    0
-  );
 }
