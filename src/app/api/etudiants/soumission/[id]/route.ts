@@ -4,13 +4,13 @@ import { prisma } from "@/db/prisma"; // Adjust the import path as needed
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ anneeNoteId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { anneeNoteId } = await params;
+    const { id } = await params;
     // Verify the AnneeNote exists and get related data
     const anneeNote = await prisma.anneeNote.findUnique({
-      where: { id: anneeNoteId },
+      where: { id },
       include: {
         etudiant: {
           include: {
@@ -50,7 +50,7 @@ export async function POST(
     // Create the submission
     const soumission = await prisma.soumission.create({
       data: {
-        anneeNoteId: anneeNoteId,
+        anneeNoteId: id,
         etudiantId: anneeNote.etudiantId,
         chefDepartementId: anneeNote.etudiant.departement.chef.id,
         statut: "PENDING",
@@ -151,16 +151,16 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { anneeNoteId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { anneeNoteId } = params;
+    const { id } = await params;
     const body = await request.json();
     const { statut, commentaire, dateValidation } = body;
 
     // Verify the submission exists
     const existingSoumission = await prisma.soumission.findUnique({
-      where: { anneeNoteId: anneeNoteId },
+      where: { anneeNoteId: id },
       include: {
         etudiant: true,
       },
@@ -177,7 +177,7 @@ export async function PUT(
     const updatedSoumission = await prisma.$transaction(async (tx) => {
       // Update submission
       const soumission = await tx.soumission.update({
-        where: { anneeNoteId: anneeNoteId },
+        where: { anneeNoteId: id },
         data: {
           statut: statut || existingSoumission.statut,
           commentaire:
@@ -230,14 +230,14 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { anneeNoteId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { anneeNoteId } = params;
+    const { id } = await params;
 
     // Verify the submission exists
     const existingSoumission = await prisma.soumission.findUnique({
-      where: { anneeNoteId: anneeNoteId },
+      where: { anneeNoteId: id },
       include: {
         etudiant: true,
       },
@@ -261,7 +261,7 @@ export async function DELETE(
     // Delete the submission and update student progression
     await prisma.$transaction(async (tx) => {
       await tx.soumission.delete({
-        where: { anneeNoteId: anneeNoteId },
+        where: { anneeNoteId: id },
       });
 
       await tx.etudiant.update({
